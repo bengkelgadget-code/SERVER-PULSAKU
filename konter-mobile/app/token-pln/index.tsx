@@ -116,28 +116,40 @@ export default function TokenPlnScreen() {
         setCustomerName('');
         try {
           const { data: { session } } = await supabase.auth.getSession();
-          if (!session?.access_token) return;
+          if (!session?.access_token) {
+            setCustomerName('⚠ Sesi login berakhir');
+            return;
+          }
 
-          const res = await fetch(
-            `${process.env.EXPO_PUBLIC_APP_URL || 'https://server-pulsaku.vercel.app'}/api/mobile/transaction/inquiry-pln`,
-            {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-                Authorization: `Bearer ${session.access_token}`,
-              },
-              body: JSON.stringify({ customer_no: meterNo }),
-            }
-          );
+          const apiUrl = `${process.env.EXPO_PUBLIC_APP_URL || 'https://server-pulsaku.vercel.app'}/api/mobile/transaction/inquiry-pln`;
+          console.log('Calling inquiry PLN:', apiUrl, 'customer_no:', meterNo);
 
-          if (res.ok) {
-            const data = await res.json();
+          const res = await fetch(apiUrl, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              Authorization: `Bearer ${session.access_token}`,
+            },
+            body: JSON.stringify({ customer_no: meterNo }),
+          });
+
+          const text = await res.text();
+          console.log('Inquiry PLN raw response:', res.status, text);
+
+          try {
+            const data = JSON.parse(text);
             if (data.success && data.name) {
-              setCustomerName(data.name + (data.segment_power ? ` (${data.segment_power})` : ''));
+              setCustomerName(data.name + (data.segment_power ? ` / ${data.segment_power} VA` : ''));
+            } else {
+              setCustomerName('⚠ Nomor tidak ditemukan');
             }
+          } catch (parseErr) {
+            console.error('Failed to parse inquiry response:', parseErr);
+            setCustomerName('⚠ Gagal memproses');
           }
         } catch (err) {
           console.error('Check meter error:', err);
+          setCustomerName('⚠ Gagal terhubung ke server');
         } finally {
           setIsCheckingMeter(false);
         }
@@ -268,8 +280,17 @@ export default function TokenPlnScreen() {
             )}
             {meterNo.length >= 11 && !isCheckingMeter && customerName ? (
               <View style={styles.meterHint}>
-                <Ionicons name="person" size={14} color={Colors.accent} />
-                <Text style={styles.meterHintText}>{customerName}</Text>
+                {customerName.startsWith('⚠') ? (
+                  <>
+                    <Ionicons name="warning" size={14} color="#F59E0B" />
+                    <Text style={[styles.meterHintText, { color: '#F59E0B' }]}>{customerName.replace('⚠ ', '')}</Text>
+                  </>
+                ) : (
+                  <>
+                    <Ionicons name="person" size={14} color={Colors.accent} />
+                    <Text style={[styles.meterHintText, { color: Colors.accent, fontWeight: '700' }]}>{customerName}</Text>
+                  </>
+                )}
               </View>
             ) : meterNo.length >= 11 && !isCheckingMeter && !customerName ? (
               <View style={styles.meterHint}>

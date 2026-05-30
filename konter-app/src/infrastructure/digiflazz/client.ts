@@ -135,31 +135,32 @@ export class DigiFlazzClient {
   }
 
   async inquiryPln(customer_no: string): Promise<{ name: string; segment_power: string } | null> {
-    // Generate a random ref_id for inquiry
-    const ref_id = `INQ-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
-    const signature = this.generateSignature(ref_id);
+    // For inquiry PLN, signature = md5(username + apiKey + customer_no)
+    const signature = crypto
+      .createHash('md5')
+      .update(this.username + this.apiKey + customer_no)
+      .digest('hex');
 
     try {
-      const response = await fetch(`${this.baseUrl}/transaction`, {
+      const response = await fetch(`${this.baseUrl}/inquiry-pln`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          commands: 'pln-subscribe',
-          customer_no: customer_no,
           username: this.username,
+          customer_no: customer_no,
           sign: signature,
         }),
       });
 
-      if (!response.ok) return null;
       const data = await response.json();
+      console.log('DigiFlazz inquiry PLN response:', JSON.stringify(data));
       
-      // Digiflazz pln-subscribe returns customer name and segment in `desc` or `customer_name`
-      if (data && data.data && data.data.customer_name) {
+      // DigiFlazz returns { data: { name, segment_power, ... } }
+      if (data && data.data && data.data.name) {
         return {
-          name: data.data.customer_name,
+          name: data.data.name,
           segment_power: data.data.segment_power || '',
         };
       }
