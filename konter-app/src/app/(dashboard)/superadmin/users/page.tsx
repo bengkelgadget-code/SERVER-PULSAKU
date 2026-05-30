@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { RoleBadge } from '@/components/RoleBadge'
 import { UserActions } from '@/components/UserActions'
+import { MitraTopUpButton } from '@/components/MitraTopUpButton'
 import { redirect } from 'next/navigation'
 
 interface SearchParams {
@@ -150,11 +151,14 @@ export default async function SuperAdminUsersPage({
                       <RoleBadge role={u.role} />
                     </TableCell>
                     <TableCell className="text-center pr-4">
-                      <UserActions
-                        userId={u.id}
-                        currentRole={u.role}
-                        isSelf={u.id === user.id}
-                      />
+                      <div className="flex items-center justify-center gap-2 flex-wrap">
+                        <MitraTopUpButton userId={u.id} email={u.email} namaToko={u.nama_toko || undefined} />
+                        <UserActions
+                          userId={u.id}
+                          currentRole={u.role}
+                          isSelf={u.id === user.id}
+                        />
+                      </div>
                     </TableCell>
                   </TableRow>
                 ))}
