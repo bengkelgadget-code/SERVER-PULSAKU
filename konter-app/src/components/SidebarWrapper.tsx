@@ -1,5 +1,6 @@
 import { Sidebar } from './DashboardSidebar'
 import { digiflazz } from '@/infrastructure/digiflazz/client'
+import { createClient } from '@/infrastructure/supabase/server'
 
 export async function SidebarWrapper({ 
   userRole, 
@@ -11,7 +12,16 @@ export async function SidebarWrapper({
   email?: string 
 }) {
   let digiflazzBalance = 0
+  let userBalance = 0
   
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+
+  if (user) {
+    const { data: userData } = await supabase.from('users').select('saldo').eq('id', user.id).single()
+    if (userData) userBalance = Number(userData.saldo)
+  }
+
   // Hanya fetch saldo digiflazz jika role adalah admin/superadmin
   if (userRole === 'superadmin' || userRole === 'admin') {
     try {
@@ -24,7 +34,8 @@ export async function SidebarWrapper({
   return (
     <Sidebar
       userRole={userRole}
-      balance={digiflazzBalance}
+      balance={userBalance}
+      digiflazzBalance={userRole === 'superadmin' || userRole === 'admin' ? digiflazzBalance : undefined}
       storeName={storeName}
       email={email}
     />

@@ -30,11 +30,12 @@ interface NavItem {
 interface SidebarProps {
   userRole: 'superadmin' | 'admin' | 'staff'
   balance?: number
+  digiflazzBalance?: number
   storeName?: string
   email?: string
 }
 
-export function Sidebar({ userRole, balance = 0, storeName, email }: SidebarProps) {
+export function Sidebar({ userRole, balance = 0, digiflazzBalance, storeName, email }: SidebarProps) {
   const pathname = usePathname()
   const [collapsed, setCollapsed] = useState(false)
 
@@ -114,24 +115,38 @@ export function Sidebar({ userRole, balance = 0, storeName, email }: SidebarProp
         </button>
       </div>
 
-      {/* Balance Card */}
-      <div className="px-3 py-4 border-b border-zinc-200 dark:border-zinc-800">
+      {/* Balance Cards */}
+      <div className="px-3 py-4 border-b border-zinc-200 dark:border-zinc-800 flex flex-col gap-3">
         {collapsed ? (
           <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-green-500/20 to-emerald-500/20 flex items-center justify-center mx-auto">
             <Wallet className="w-6 h-6 text-green-600 dark:text-green-400" />
           </div>
         ) : (
-          <div className="bg-gradient-to-br from-green-500 to-emerald-600 rounded-xl p-4 shadow-lg">
-            <p className="text-[10px] font-semibold text-green-100 uppercase tracking-wider mb-1">
-              {userRole === 'superadmin' || userRole === 'admin' ? 'Saldo Pusat' : 'Saldo Anda'}
-            </p>
-            <p className="text-xl font-black text-white">
-              Rp {balance.toLocaleString('id-ID')}
-            </p>
-            {email && (
-              <p className="text-[10px] text-green-100/70 mt-1 truncate">{email}</p>
+          <>
+            {digiflazzBalance !== undefined && (
+              <div className="bg-gradient-to-br from-indigo-500 to-purple-600 rounded-xl p-4 shadow-lg relative overflow-hidden group">
+                <div className="absolute -right-4 -top-4 w-20 h-20 bg-white/10 rounded-full blur-xl group-hover:bg-white/20 transition-all"></div>
+                <p className="text-[10px] font-semibold text-indigo-100 uppercase tracking-wider mb-1 relative z-10">
+                  Saldo Digiflazz
+                </p>
+                <p className="text-xl font-black text-white relative z-10">
+                  Rp {digiflazzBalance.toLocaleString('id-ID')}
+                </p>
+              </div>
             )}
-          </div>
+            <div className="bg-gradient-to-br from-green-500 to-emerald-600 rounded-xl p-4 shadow-lg relative overflow-hidden group">
+              <div className="absolute -right-4 -bottom-4 w-20 h-20 bg-white/10 rounded-full blur-xl group-hover:bg-white/20 transition-all"></div>
+              <p className="text-[10px] font-semibold text-green-100 uppercase tracking-wider mb-1 relative z-10">
+                {userRole === 'superadmin' || userRole === 'admin' ? 'Saldo Pusat (Lokal)' : 'Saldo Anda'}
+              </p>
+              <p className="text-xl font-black text-white relative z-10">
+                Rp {balance.toLocaleString('id-ID')}
+              </p>
+              {email && (
+                <p className="text-[10px] text-green-100/70 mt-1 truncate relative z-10">{email}</p>
+              )}
+            </div>
+          </>
         )}
       </div>
 

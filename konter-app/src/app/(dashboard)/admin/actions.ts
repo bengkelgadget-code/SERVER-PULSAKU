@@ -82,6 +82,17 @@ export async function addBalanceDirect(formData: FormData): Promise<void> {
 
   const supabase = await createClient()
 
+  const { data: { user: adminUser } } = await supabase.auth.getUser()
+  if (!adminUser) throw new Error('Unauthorized')
+
+  // Check admin balance
+  const { data: adminData } = await supabase.from('users').select('saldo').eq('id', adminUser.id).single()
+  if (!adminData) throw new Error('Admin not found')
+
+  if (Number(adminData.saldo) < amount) {
+    throw new Error('Saldo Pusat tidak mencukupi untuk transfer ini.')
+  }
+
   // Get current balance
   const { data: user, error: fetchError } = await supabase
     .from('users')
@@ -94,6 +105,7 @@ export async function addBalanceDirect(formData: FormData): Promise<void> {
   }
 
   const newSaldo = Number(user.saldo) + amount
+  const newAdminSaldo = Number(adminData.saldo) - amount
 
   const { error } = await supabase
     .from('users')
@@ -103,6 +115,12 @@ export async function addBalanceDirect(formData: FormData): Promise<void> {
   if (error) {
     throw new Error(error.message)
   }
+
+  // Deduct admin balance
+  await supabase
+    .from('users')
+    .update({ saldo: newAdminSaldo })
+    .eq('id', adminUser.id)
 
   revalidatePath('/admin/users')
 }

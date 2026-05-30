@@ -36,8 +36,22 @@ export async function processDeposit(formData: FormData): Promise<void> {
       .single()
 
     if (user) {
-      const newSaldo = parseFloat(user.saldo) + amount
-      await supabase.from('users').update({ saldo: newSaldo }).eq('id', user_id)
+      const { data: { user: adminUser } } = await supabase.auth.getUser()
+      if (adminUser) {
+        const { data: adminData } = await supabase.from('users').select('saldo').eq('id', adminUser.id).single()
+        
+        if (adminData && Number(adminData.saldo) >= amount) {
+          const newSaldo = parseFloat(user.saldo) + amount
+          const newAdminSaldo = Number(adminData.saldo) - amount
+          
+          await supabase.from('users').update({ saldo: newSaldo }).eq('id', user_id)
+          await supabase.from('users').update({ saldo: newAdminSaldo }).eq('id', adminUser.id)
+        } else {
+          // Revert deposit status if admin balance is insufficient
+          await supabase.from('deposits').update({ status: 'pending' }).eq('id', deposit_id)
+          throw new Error('Saldo Pusat tidak mencukupi untuk menyetujui deposit ini.')
+        }
+      }
     }
 
   } else if (action === 'reject') {
