@@ -47,14 +47,14 @@ export default async function LoginPage(props: { searchParams: Promise<{ error?:
                 {searchParams.message}
               </p>
             )}
-            <Button form="login-form" type="submit" className="w-full font-bold shadow-md hover:shadow-lg transition-all rounded-xl bg-gradient-to-r from-primary to-indigo-600 hover:from-primary/90 hover:to-indigo-600/90 py-6">
+            <Button type="submit" className="w-full font-bold shadow-md hover:shadow-lg transition-all rounded-xl bg-gradient-to-r from-primary to-indigo-600 hover:from-primary/90 hover:to-indigo-600/90 py-6">
               Sign In
             </Button>
           </form>
         </CardContent>
         <div className="p-6 pt-0 text-center text-sm text-muted-foreground border-t border-border/50 bg-white/30 dark:bg-black/10 mt-6 rounded-b-xl">
           Don&apos;t have an account?{' '}
-          <Link href="/signup" className="underline underline-offset-4 hover:text-primary font-medium transition-colors">
+          <Link href="/register" className="underline underline-offset-4 hover:text-primary font-medium transition-colors">
             Sign up
           </Link>
         </div>

@@ -42,7 +42,7 @@ export default async function RegisterPage(props: { searchParams: Promise<{ erro
                 {searchParams.error}
               </p>
             )}
-            <Button form="register-form" type="submit" className="w-full font-bold shadow-md hover:shadow-lg transition-all rounded-xl bg-gradient-to-r from-primary to-indigo-600 hover:from-primary/90 hover:to-indigo-600/90 py-6 mt-4">
+            <Button type="submit" className="w-full font-bold shadow-md hover:shadow-lg transition-all rounded-xl bg-gradient-to-r from-primary to-indigo-600 hover:from-primary/90 hover:to-indigo-600/90 py-6 mt-4">
               Sign Up
             </Button>
           </form>
