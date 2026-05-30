@@ -74,7 +74,14 @@ function BalanceCard({ saldo, isLoading }: { saldo: number; isLoading: boolean }
 
         <View style={styles.quickActionsRow}>
           {quickActions.map(action => (
-            <TouchableOpacity key={action.id} style={styles.quickAction}>
+            <TouchableOpacity 
+              key={action.id} 
+              style={styles.quickAction}
+              onPress={() => {
+                const router = require('expo-router').router;
+                if (action.id === 'topup') router.push('/deposit');
+              }}
+            >
               <View style={[styles.quickActionIcon, { backgroundColor: action.color + '1A' }]}>
                 <Ionicons name={action.icon} size={22} color={action.color} />
               </View>

@@ -35,6 +35,10 @@ export default function RootLayout() {
             animation: 'slide_from_right',
           }}
         />
+        <Stack.Screen 
+          name="deposit" 
+          options={{ headerShown: false, animation: 'slide_from_bottom' }} 
+        />
       </Stack>
       <StatusBar style="light" />
     </AuthProvider>

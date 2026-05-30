@@ -101,6 +101,8 @@ CREATE TABLE public.deposits (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   user_id UUID REFERENCES public.users(id) ON DELETE CASCADE,
   amount DECIMAL(12, 2) NOT NULL,
+  unique_code INT,
+  total_amount DECIMAL(12, 2),
   status deposit_status DEFAULT 'pending',
   bukti_transfer TEXT,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
@@ -128,6 +130,34 @@ ON public.deposits FOR ALL
 USING (
   EXISTS (SELECT 1 FROM public.users WHERE id = auth.uid() AND role IN ('admin', 'superadmin'))
 );
+
+-- RPC: Auto Approve Deposit
+CREATE OR REPLACE FUNCTION approve_deposit(p_deposit_id UUID)
+RETURNS BOOLEAN AS $$
+DECLARE
+  v_user_id UUID;
+  v_total_amount DECIMAL;
+  v_status deposit_status;
+BEGIN
+  -- Get deposit details and lock row
+  SELECT user_id, total_amount, status INTO v_user_id, v_total_amount, v_status
+  FROM public.deposits
+  WHERE id = p_deposit_id FOR UPDATE;
+
+  -- Only approve if currently pending
+  IF v_status != 'pending' THEN
+    RETURN FALSE;
+  END IF;
+
+  -- Update deposit status
+  UPDATE public.deposits SET status = 'approved', updated_at = NOW() WHERE id = p_deposit_id;
+
+  -- Add balance
+  UPDATE public.users SET saldo = saldo + v_total_amount WHERE id = v_user_id;
+
+  RETURN TRUE;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
 
 -- 5. Create Transactions Table
 CREATE TABLE public.transactions (
