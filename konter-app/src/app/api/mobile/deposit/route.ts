@@ -1,8 +1,20 @@
 import { NextResponse } from 'next/server'
-import { createClient } from '@/infrastructure/supabase/server'
+import { createClient as createSupabaseClient } from '@supabase/supabase-js'
 
 export async function POST(request: Request) {
-  const supabase = await createClient()
+  const authHeader = request.headers.get('Authorization')
+  
+  const supabase = createSupabaseClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      global: {
+        headers: {
+          Authorization: authHeader || '',
+        },
+      },
+    }
+  )
 
   // 1. Authenticate user
   const { data: { user } } = await supabase.auth.getUser()
@@ -76,8 +88,8 @@ export async function POST(request: Request) {
       }
     })
 
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Deposit error:', error)
-    return NextResponse.json({ error: error.message || 'Internal Server Error' }, { status: 500 })
+    return NextResponse.json({ error: (error as Error).message || 'Internal Server Error' }, { status: 500 })
   }
 }
