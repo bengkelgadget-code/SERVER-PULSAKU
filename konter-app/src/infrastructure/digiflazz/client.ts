@@ -132,6 +132,8 @@ export class DigiFlazzClient {
     }
 
     return response.json();
+  }
+
   async inquiryPln(customer_no: string): Promise<{ name: string; segment_power: string } | null> {
     // Generate a random ref_id for inquiry
     const ref_id = `INQ-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
