@@ -49,7 +49,7 @@ export async function getProductsByBrand(brand: string): Promise<PulsaProduct[]>
   const { data, error } = await supabase
     .from('products')
     .select('*')
-    .eq('brand', brand)
+    .ilike('brand', brand)
     .eq('is_active', true)
     .order('harga_jual', { ascending: true });
 
@@ -100,7 +100,7 @@ export async function searchProducts(
   const { data, error } = await supabase
     .from('products')
     .select('*')
-    .eq('brand', brand)
+    .ilike('brand', brand)
     .eq('is_active', true)
     .ilike('product_name', `%${searchTerm}%`)
     .order('harga_jual', { ascending: true });
