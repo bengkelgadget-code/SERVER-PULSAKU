@@ -131,7 +131,7 @@ export default function PulsaScreen() {
     setIsLoading(true);
     try {
       const data = await getProductsByBrand(brand);
-      setProducts(data);
+      setProducts(data.filter(p => p.category.toLowerCase() === 'pulsa'));
     } catch (error) {
       console.error('Error loading products:', error);
       setProducts([]);
@@ -329,9 +329,9 @@ export default function PulsaScreen() {
                     onChangeText={searchTerm => {
                       setSearch(searchTerm);
                       if (searchTerm) {
-                        searchProducts(provider.id, searchTerm).then(setProducts);
+                        searchProducts(provider.id, searchTerm).then(data => setProducts(data.filter(p => p.category.toLowerCase() === 'pulsa')));
                       } else {
-                        getProductsByBrand(provider.id).then(setProducts);
+                        getProductsByBrand(provider.id).then(data => setProducts(data.filter(p => p.category.toLowerCase() === 'pulsa')));
                       }
                     }}
                     placeholder="Cari nominal..."

@@ -178,7 +178,7 @@ function CategoryGrid() {
 
   const handleCategoryPress = (catName: string) => {
     if (catName === 'Pulsa') router.push('/pulsa/products');
-    else if (catName === 'Token PLN') router.push('/token-pln/index');
+    else if (catName === 'Token PLN') router.push('/token-pln');
     else if (catName === 'Paket Data') setShowProviderModal(true);
   };
 
