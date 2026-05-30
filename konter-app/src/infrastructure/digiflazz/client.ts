@@ -124,14 +124,17 @@ export class DigiFlazzClient {
         customer_no: customer_no,
         ref_id: ref_id,
         sign: signature,
+        testing: this.apiKey.startsWith('dev-') ? true : undefined,
       }),
     });
 
-    if (!response.ok) {
+    const data = await response.json().catch(() => null);
+    
+    if (!response.ok && !data) {
       throw new Error(`DigiFlazz Transaction API Error: ${response.statusText}`);
     }
 
-    return response.json();
+    return data;
   }
 
   async inquiryPln(customer_no: string): Promise<{ name: string; segment_power: string } | null> {
