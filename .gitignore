@@ -1,0 +1,48 @@
+# Root gitignore for KONTER monorepo
+
+# Dependencies
+**/node_modules/
+**/.pnp
+.pnp.*
+
+# Next.js build and outputs
+konter-app/.next/
+konter-app/out/
+konter-app/build/
+konter-app/next-env.d.ts
+
+# Expo & Mobile build/native folders
+konter-mobile/.expo/
+konter-mobile/dist/
+konter-mobile/web-build/
+konter-mobile/expo-env.d.ts
+konter-mobile/ios/
+konter-mobile/android/
+konter-mobile/.kotlin/
+konter-mobile/*.orig.*
+konter-mobile/*.jks
+konter-mobile/*.p8
+konter-mobile/*.p12
+konter-mobile/*.key
+konter-mobile/*.mobileprovision
+konter-mobile/.metro-health-check*
+
+# Environment and sensitive secret files (CRITICAL!)
+**/.env
+**/.env.local
+**/.env.*
+**/*.pem
+**/*.key
+
+# Debug and Logs
+**/npm-debug.log*
+**/yarn-debug.log*
+**/yarn-error.log*
+**/.pnpm-debug.log*
+
+# System Files
+.DS_Store
+Thumbs.db
+
+# TypeScript build info
+**/*.tsbuildinfo
