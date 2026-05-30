@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -12,7 +12,9 @@ import {
   Modal,
   Pressable,
   ActivityIndicator,
+  RefreshControl,
 } from 'react-native';
+import { useFocusEffect } from '@react-navigation/native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
@@ -213,27 +215,34 @@ export default function HomeScreen() {
   const { user } = useAuth();
   const [saldo, setSaldo] = useState(0);
   const [saldoLoading, setSaldoLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
 
-  // Fetch fresh saldo from Supabase directly on mount
-  useEffect(() => {
-    const fetchSaldo = async () => {
-      if (!user?.id) return;
-      setSaldoLoading(true);
-      try {
-        const { data } = await supabase
-          .from('users')
-          .select('saldo')
-          .eq('id', user.id)
-          .single();
-        if (data) setSaldo(Number(data.saldo) || 0);
-      } catch (e) {
-        console.error('Error fetching saldo:', e);
-      } finally {
-        setSaldoLoading(false);
-      }
-    };
-    fetchSaldo();
+  const fetchSaldo = useCallback(async () => {
+    if (!user?.id) return;
+    try {
+      const { data } = await supabase
+        .from('users')
+        .select('saldo')
+        .eq('id', user.id)
+        .single();
+      if (data) setSaldo(Number(data.saldo) || 0);
+    } catch (e) {
+      console.error('Error fetching saldo:', e);
+    }
   }, [user?.id]);
+
+  useFocusEffect(
+    useCallback(() => {
+      setSaldoLoading(true);
+      fetchSaldo().finally(() => setSaldoLoading(false));
+    }, [fetchSaldo])
+  );
+
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    await fetchSaldo();
+    setRefreshing(false);
+  }, [fetchSaldo]);
 
   const avatarInitials = user?.email?.[0]?.toUpperCase() || 'U';
   const displayName = user?.nama_toko || user?.email?.split('@')[0] || 'User';
@@ -273,6 +282,15 @@ export default function HomeScreen() {
         style={styles.scrollView}
         contentContainerStyle={{ paddingTop: CARD_TOP_OFFSET }}
         showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            colors={[Colors.primary]}
+            tintColor={Colors.primary}
+            progressViewOffset={CARD_TOP_OFFSET - 20}
+          />
+        }
       >
         <BalanceCard saldo={saldo} isLoading={saldoLoading} />
 
