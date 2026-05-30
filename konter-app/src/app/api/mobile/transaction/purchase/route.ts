@@ -5,11 +5,22 @@
  */
 import { NextResponse } from 'next/server'
 import crypto from 'crypto'
-import { createClient } from '@/infrastructure/supabase/server'
+import { createClient as createSupabaseClient } from '@supabase/supabase-js'
 import { digiflazz } from '@/infrastructure/digiflazz/client'
 
 export async function POST(request: Request) {
-  const supabase = await createClient()
+  const authHeader = request.headers.get('Authorization')
+  const supabase = createSupabaseClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      global: {
+        headers: {
+          Authorization: authHeader || '',
+        },
+      },
+    }
+  )
 
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) {

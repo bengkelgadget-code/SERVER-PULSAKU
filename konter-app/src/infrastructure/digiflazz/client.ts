@@ -132,7 +132,40 @@ export class DigiFlazzClient {
     }
 
     return response.json();
+  async inquiryPln(customer_no: string): Promise<{ name: string; segment_power: string } | null> {
+    // Generate a random ref_id for inquiry
+    const ref_id = `INQ-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
+    const signature = this.generateSignature(ref_id);
+
+    try {
+      const response = await fetch(`${this.baseUrl}/transaction`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          commands: 'pln-subscribe',
+          customer_no: customer_no,
+          username: this.username,
+          sign: signature,
+        }),
+      });
+
+      if (!response.ok) return null;
+      const data = await response.json();
+      
+      // Digiflazz pln-subscribe returns customer name and segment in `desc` or `customer_name`
+      if (data && data.data && data.data.customer_name) {
+        return {
+          name: data.data.customer_name,
+          segment_power: data.data.segment_power || '',
+        };
+      }
+      return null;
+    } catch (e) {
+      console.error('Inquiry PLN failed:', e);
+      return null;
+    }
   }
 }
-
 export const digiflazz = new DigiFlazzClient();

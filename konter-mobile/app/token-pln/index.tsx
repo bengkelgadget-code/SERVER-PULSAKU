@@ -82,6 +82,8 @@ export default function TokenPlnScreen() {
   const [isLoading, setIsLoading] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<PulsaProduct | null>(null);
   const [isPurchasing, setIsPurchasing] = useState(false);
+  const [customerName, setCustomerName] = useState('');
+  const [isCheckingMeter, setIsCheckingMeter] = useState(false);
 
   // Load PLN products on mount
   useEffect(() => {
@@ -107,6 +109,47 @@ export default function TokenPlnScreen() {
     }
   };
 
+  useEffect(() => {
+    const checkMeter = async () => {
+      if (meterNo.length >= 11) {
+        setIsCheckingMeter(true);
+        setCustomerName('');
+        try {
+          const { data: { session } } = await supabase.auth.getSession();
+          if (!session?.access_token) return;
+
+          const res = await fetch(
+            `${process.env.EXPO_PUBLIC_APP_URL || 'https://server-pulsaku.vercel.app'}/api/mobile/transaction/inquiry-pln`,
+            {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                Authorization: `Bearer ${session.access_token}`,
+              },
+              body: JSON.stringify({ customer_no: meterNo }),
+            }
+          );
+
+          if (res.ok) {
+            const data = await res.json();
+            if (data.success && data.name) {
+              setCustomerName(data.name + (data.segment_power ? ` (${data.segment_power})` : ''));
+            }
+          }
+        } catch (err) {
+          console.error('Check meter error:', err);
+        } finally {
+          setIsCheckingMeter(false);
+        }
+      } else {
+        setCustomerName('');
+      }
+    };
+
+    const timeout = setTimeout(checkMeter, 1000);
+    return () => clearTimeout(timeout);
+  }, [meterNo]);
+
   const handleBuy = (product: PulsaProduct) => {
     if (meterNo.length < 6) {
       Alert.alert('Peringatan', 'Masukkan nomor meter terlebih dahulu (minimal 6 digit)');
@@ -129,7 +172,7 @@ export default function TokenPlnScreen() {
       }
 
       const res = await fetch(
-        `${process.env.EXPO_PUBLIC_APP_URL || 'http://localhost:3000'}/api/mobile/transaction/purchase`,
+        `${process.env.EXPO_PUBLIC_APP_URL || 'https://server-pulsaku.vercel.app'}/api/mobile/transaction/purchase`,
         {
           method: 'POST',
           headers: {
@@ -211,12 +254,29 @@ export default function TokenPlnScreen() {
               keyboardType="number-pad"
               maxLength={14}
             />
-            {meterNo.length >= 6 && (
+            {meterNo.length >= 6 && meterNo.length < 11 && (
+              <View style={styles.meterHint}>
+                <Ionicons name="information-circle" size={14} color={Colors.gray500} />
+                <Text style={[styles.meterHintText, { color: Colors.gray500 }]}>Minimal 11 digit untuk cek nama</Text>
+              </View>
+            )}
+            {meterNo.length >= 11 && isCheckingMeter && (
+              <View style={styles.meterHint}>
+                <ActivityIndicator size="small" color={Colors.warning} style={{ width: 14, height: 14, marginRight: 4 }} />
+                <Text style={[styles.meterHintText, { color: Colors.gray500 }]}>Mengecek nama pelanggan...</Text>
+              </View>
+            )}
+            {meterNo.length >= 11 && !isCheckingMeter && customerName ? (
+              <View style={styles.meterHint}>
+                <Ionicons name="person" size={14} color={Colors.accent} />
+                <Text style={styles.meterHintText}>{customerName}</Text>
+              </View>
+            ) : meterNo.length >= 11 && !isCheckingMeter && !customerName ? (
               <View style={styles.meterHint}>
                 <Ionicons name="checkmark-circle" size={14} color={Colors.accent} />
                 <Text style={styles.meterHintText}>No. Meter valid ({meterNo.length} digit)</Text>
               </View>
-            )}
+            ) : null}
           </View>
 
           <View style={styles.listHeaderRow}>
