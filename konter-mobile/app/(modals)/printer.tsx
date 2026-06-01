@@ -11,10 +11,10 @@ import { BluetoothManager, BluetoothEscposPrinter } from '@/utils/printer';
 export default function PrinterScreen() {
   const router = useRouter();
   const [isScanning, setIsScanning] = useState(false);
-  const [devices, setDevices] = useState<any[]>([]);
   const [pairedDevices, setPairedDevices] = useState<any[]>([]);
   const [connectedDevice, setConnectedDevice] = useState<any>(null);
   const [isConnecting, setIsConnecting] = useState(false);
+  const [connectingAddress, setConnectingAddress] = useState<string | null>(null);
   
   const isPrinterSupported = !!BluetoothManager;
 
@@ -102,6 +102,7 @@ export default function PrinterScreen() {
 
   const connectToDevice = async (device: any) => {
     setIsConnecting(true);
+    setConnectingAddress(device.address);
     try {
       await BluetoothManager.connect(device.address);
       setConnectedDevice(device);
@@ -111,6 +112,7 @@ export default function PrinterScreen() {
       Alert.alert('Gagal Terhubung', e.message || 'Tidak dapat terhubung ke printer. Pastikan printer menyala.');
     } finally {
       setIsConnecting(false);
+      setConnectingAddress(null);
     }
   };
 
@@ -152,7 +154,7 @@ export default function PrinterScreen() {
           Modul Printer Native (Bluetooth ESC/POS) membutuhkan aplikasi yang dibuild ulang (APK/Dev Client).
           Jika Anda membuka ini lewat aplikasi Expo Go standar, fitur ini tidak dapat dijalankan.
         </Text>
-        <TouchableOpacity style={styles.backBtn} onPress={() => router.back()} style={{ marginTop: 24, backgroundColor: Colors.gray200, paddingHorizontal: 24, paddingVertical: 12, borderRadius: 8 }}>
+        <TouchableOpacity onPress={() => router.back()} style={{ marginTop: 24, backgroundColor: Colors.gray200, paddingHorizontal: 24, paddingVertical: 12, borderRadius: 8 }}>
           <Text style={{ fontWeight: '700' }}>Kembali</Text>
         </TouchableOpacity>
       </View>
@@ -225,7 +227,7 @@ export default function PrinterScreen() {
                   </Text>
                   <Text style={styles.deviceAddress}>{item.address}</Text>
                 </View>
-                {isConnecting && connectedDevice?.address === item.address ? (
+                {isConnecting && connectingAddress === item.address ? (
                   <ActivityIndicator size="small" color={Colors.primary} />
                 ) : isConnected ? (
                   <Ionicons name="checkmark-circle" size={24} color={Colors.primary} />

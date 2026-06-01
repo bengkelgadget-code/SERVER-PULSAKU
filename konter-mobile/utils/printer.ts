@@ -29,10 +29,11 @@ export const PRINTER_WIDTH = 32;
  * E.g., "IDPEL          : 1234567890"
  */
 export function formatLineKeyValue(label: string, value: string, separator: string = ' : '): string {
-  const maxLabelLen = 12; // Adjusted based on the receipt image
-  const paddedLabel = label.padEnd(maxLabelLen, ' ');
+  const maxLabelLen = 10; // Matches receipt image alignment
+  const paddedLabel = label.length > maxLabelLen ? label : label.padEnd(maxLabelLen, ' ');
   const combined = `${paddedLabel}${separator}${value}`;
-  return combined.substring(0, PRINTER_WIDTH);
+  // Don't truncate — the printer will auto-wrap. Truncating can cut off prices.
+  return combined;
 }
 
 /**

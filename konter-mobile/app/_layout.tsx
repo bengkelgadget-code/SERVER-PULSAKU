@@ -39,6 +39,14 @@ export default function RootLayout() {
           name="deposit" 
           options={{ headerShown: false, animation: 'slide_from_bottom' }} 
         />
+        <Stack.Screen
+          name="(modals)/printer"
+          options={{
+            headerShown: false,
+            animation: 'slide_from_bottom',
+            presentation: 'modal',
+          }}
+        />
       </Stack>
       <StatusBar style="light" />
     </AuthProvider>

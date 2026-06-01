@@ -11,6 +11,7 @@ import { useRouter } from 'expo-router';
 import { Colors, Spacing, Radius, FontSize, Shadow } from '@/constants/theme';
 import { getProductsByCategory, PulsaProduct } from '@/services/product.service';
 import { supabase } from '@/lib/supabase';
+import { BluetoothManager, BluetoothEscposPrinter, printReceiptPln } from '@/utils/printer';
 
 function ProductCard({ item, onPress }: { item: PulsaProduct; onPress: () => void }) {
   return (
@@ -252,7 +253,6 @@ export default function TokenPlnScreen() {
   const handlePrintReceipt = async () => {
     if (!successData) return;
     try {
-      const { BluetoothManager, BluetoothEscposPrinter, printReceiptPln } = require('@/utils/printer');
       if (!BluetoothManager) {
         Alert.alert('Gagal', 'Printer tidak didukung di Expo Go. Harap build aplikasi.');
         return;
@@ -264,7 +264,11 @@ export default function TokenPlnScreen() {
         return;
       }
 
-      // We assume connected already. In real app we might need to check if it's really connected.
+      if (!BluetoothEscposPrinter) {
+        Alert.alert('Gagal', 'Modul printer ESC/POS tidak tersedia.');
+        return;
+      }
+
       await printReceiptPln(BluetoothEscposPrinter, {
         idpel: successData.meterNo,
         nama: successData.customerName?.replace('⚠ ', '') || '-',
