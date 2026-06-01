@@ -45,6 +45,11 @@ export async function updateProductPrice(formData: FormData): Promise<void> {
     throw new Error(error.message)
   }
 
+  if (!data || data.length === 0) {
+    console.error(`[Price Update] Error: No rows updated for SKU ${sku_code}. RLS policy check failed or SKU not found.`)
+    throw new Error('Gagal menyimpan harga: Tidak memiliki izin (RLS) atau produk tidak ditemukan.')
+  }
+
   console.log("[Price Update] Database update successful:", data)
 
   revalidatePath('/admin')

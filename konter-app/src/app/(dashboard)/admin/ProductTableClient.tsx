@@ -19,10 +19,16 @@ export function ProductTableClient({ initialProducts }: ProductTableClientProps)
   
   const timeoutRefs = useRef<Record<string, NodeJS.Timeout>>({})
 
-  // Sync state when initialProducts prop changes due to filter updates
+  const prevSkusRef = useRef<string>('')
+
+  // Sync state when initialProducts prop changes due to filter updates (SKU list change)
   useEffect(() => {
-    setProducts(initialProducts)
-    setEditedPrices({})
+    const currentSkus = initialProducts.map(p => p.sku_code).join(',')
+    if (currentSkus !== prevSkusRef.current) {
+      setProducts(initialProducts)
+      setEditedPrices({})
+      prevSkusRef.current = currentSkus
+    }
   }, [initialProducts])
 
   // Cleanup timeouts on unmount
