@@ -33,7 +33,7 @@ function ProductCard({ item, onPress }: { item: PulsaProduct; onPress: () => voi
 }
 
 function PurchaseModal({
-  visible, product, meterNo, onClose, onConfirm,
+  visible, product, meterNo, customerName, onClose, onConfirm,
 }: {
   visible: boolean;
   product: PulsaProduct | null;

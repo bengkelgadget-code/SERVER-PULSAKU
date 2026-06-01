@@ -138,7 +138,7 @@ export default function PrinterScreen() {
       await BluetoothEscposPrinter.printText("Aplikasi sudah terhubung ke\n\r", {});
       await BluetoothEscposPrinter.printText("printer Bluetooth dengan baik.\n\r", {});
       await BluetoothEscposPrinter.printText("\n\r\n\r\n\r", {});
-    } catch (e) {
+    } catch {
       Alert.alert('Gagal Cetak', 'Printer bermasalah atau terputus.');
     }
   };
