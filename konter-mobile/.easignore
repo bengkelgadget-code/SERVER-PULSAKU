@@ -1,0 +1,26 @@
+# EAS Build ignore file
+# Exclude large local development files that are not needed for builds
+
+# Git and Expo
+.git/
+.expo/
+node_modules/
+
+# Local JDK files (very large)
+jdk/
+jdk17.zip
+
+# Build outputs
+android/build/
+ios/build/
+*.apk
+*.aab
+*.zip
+*.log
+
+# Temporary and log files we might create
+build_log*.txt
+decompress_brotli.js
+get_build_logs.py
+get_headers.py
+try_decompress.py
