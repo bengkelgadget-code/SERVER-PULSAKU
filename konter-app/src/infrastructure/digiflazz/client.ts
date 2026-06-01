@@ -1,4 +1,5 @@
 import crypto from 'crypto'
+import axios, { AxiosInstance } from 'axios'
 
 export interface DigiFlazzPriceListResponse {
   data: {
@@ -40,11 +41,11 @@ export interface DigiFlazzTransactionResponse {
   }
 }
 
-
 export class DigiFlazzClient {
   private username: string;
   private apiKey: string;
   private baseUrl = 'https://api.digiflazz.com/v1';
+  private httpClient: AxiosInstance;
 
   constructor() {
     this.username = process.env.DIGIFLAZZ_USERNAME || '';
@@ -53,6 +54,36 @@ export class DigiFlazzClient {
     if (!this.username || !this.apiKey) {
       console.warn("DigiFlazz credentials are not set in environment variables");
     }
+
+    const proxyHost = process.env.PROXY_HOST;
+    const proxyPort = process.env.PROXY_PORT;
+    const proxyUser = process.env.PROXY_USERNAME;
+    const proxyPass = process.env.PROXY_PASSWORD;
+
+    const axiosConfig: any = {
+      baseURL: this.baseUrl,
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      validateStatus: () => true, // Do not automatically throw error on HTTP 400 so we can parse DigiFlazz custom error body
+    };
+
+    if (proxyHost && proxyPort) {
+      axiosConfig.proxy = {
+        protocol: 'http',
+        host: proxyHost,
+        port: parseInt(proxyPort, 10),
+        auth: (proxyUser && proxyPass) ? {
+          username: proxyUser,
+          password: proxyPass
+        } : undefined
+      };
+      console.log(`[DigiFlazz Proxy] Terkoneksi menggunakan proxy: http://${proxyHost}:${proxyPort}`);
+    } else {
+      console.log(`[DigiFlazz Proxy] Berjalan langsung (Tanpa Proxy)`);
+    }
+
+    this.httpClient = axios.create(axiosConfig);
   }
 
   private generateSignature(command: string): string {
@@ -65,102 +96,74 @@ export class DigiFlazzClient {
   async getPriceList(command: 'prepaid' | 'postpaid' = 'prepaid'): Promise<DigiFlazzPriceListResponse> {
     const signature = this.generateSignature('depo');
     
-    const response = await fetch(`${this.baseUrl}/price-list`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        cmd: command,
-        username: this.username,
-        sign: signature,
-      }),
-      // No cache to ensure we always get the latest price and avoid caching errors
-      cache: 'no-store'
+    const response = await this.httpClient.post('/price-list', {
+      cmd: command,
+      username: this.username,
+      sign: signature,
     });
 
-    if (!response.ok) {
-      throw new Error(`DigiFlazz API Error: ${response.statusText}`);
+    if (response.status < 200 || response.status >= 300) {
+      throw new Error(`DigiFlazz API Error: ${response.statusText || response.status}`);
     }
 
-    return response.json();
+    return response.data;
   }
 
   async getBalance(): Promise<number> {
     const signature = this.generateSignature('depo');
     
-    const response = await fetch(`${this.baseUrl}/cek-saldo`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        cmd: 'deposit',
-        username: this.username,
-        sign: signature,
-      }),
-      cache: 'no-store'
+    const response = await this.httpClient.post('/cek-saldo', {
+      cmd: 'deposit',
+      username: this.username,
+      sign: signature,
     });
 
-    if (!response.ok) {
-      throw new Error(`DigiFlazz API Error: ${response.statusText}`);
+    if (response.status < 200 || response.status >= 300) {
+      throw new Error(`DigiFlazz API Error: ${response.statusText || response.status}`);
     }
 
-    const json = await response.json() as DigiFlazzBalanceResponse;
+    const json = response.data as DigiFlazzBalanceResponse;
     return json.data.deposit;
   }
 
   async createTransaction(sku_code: string, customer_no: string, ref_id: string): Promise<DigiFlazzTransactionResponse> {
     const signature = this.generateSignature(ref_id);
 
-    const response = await fetch(`${this.baseUrl}/transaction`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        username: this.username,
-        buyer_sku_code: sku_code,
-        customer_no: customer_no,
-        ref_id: ref_id,
-        sign: signature,
-        testing: this.apiKey.startsWith('dev-') ? true : undefined,
-      }),
+    const response = await this.httpClient.post('/transaction', {
+      username: this.username,
+      buyer_sku_code: sku_code,
+      customer_no: customer_no,
+      ref_id: ref_id,
+      sign: signature,
+      testing: this.apiKey.startsWith('dev-') ? true : undefined,
     });
 
-    const data = await response.json().catch(() => null);
+    const data = response.data;
+    const isOk = response.status >= 200 && response.status < 300;
     
-    if (!response.ok && !data) {
-      throw new Error(`DigiFlazz Transaction API Error: ${response.statusText}`);
+    if (!isOk && !data) {
+      throw new Error(`DigiFlazz Transaction API Error: ${response.statusText || response.status}`);
     }
 
     return data;
   }
 
   async inquiryPln(customer_no: string): Promise<{ name: string; segment_power: string } | null> {
-    // For inquiry PLN, signature = md5(username + apiKey + customer_no)
     const signature = crypto
       .createHash('md5')
       .update(this.username + this.apiKey + customer_no)
       .digest('hex');
 
     try {
-      const response = await fetch(`${this.baseUrl}/inquiry-pln`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          username: this.username,
-          customer_no: customer_no,
-          sign: signature,
-        }),
+      const response = await this.httpClient.post('/inquiry-pln', {
+        username: this.username,
+        customer_no: customer_no,
+        sign: signature,
       });
 
-      const data = await response.json();
+      const data = response.data;
       console.log('DigiFlazz inquiry PLN response:', JSON.stringify(data));
       
-      // DigiFlazz returns { data: { name, segment_power, ... } }
       if (data && data.data && data.data.name) {
         return {
           name: data.data.name,
@@ -175,3 +178,4 @@ export class DigiFlazzClient {
   }
 }
 export const digiflazz = new DigiFlazzClient();
+
