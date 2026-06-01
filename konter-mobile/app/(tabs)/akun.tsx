@@ -151,6 +151,22 @@ export default function AkunScreen() {
           </View>
         ))}
 
+        {/* Printer Setup Button */}
+        <TouchableOpacity 
+          style={[styles.printerBtn, Shadow.sm]} 
+          onPress={() => router.push('/(modals)/printer')}
+          activeOpacity={0.8}
+        >
+          <View style={styles.printerIconWrap}>
+            <Ionicons name="print" size={24} color="#fff" />
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.printerTitle}>Printer Bluetooth</Text>
+            <Text style={styles.printerSubtitle}>Atur printer untuk cetak struk</Text>
+          </View>
+          <Ionicons name="chevron-forward" size={20} color={Colors.gray400} />
+        </TouchableOpacity>
+
         {/* Logout Button */}
         <TouchableOpacity style={styles.logoutBtn} onPress={handleLogout}>
           <Ionicons name="log-out-outline" size={22} color={Colors.error} />
@@ -191,6 +207,19 @@ const styles = StyleSheet.create({
   menuIcon:     { width: 40, height: 40, borderRadius: Radius.md, alignItems: 'center', justifyContent: 'center' },
   menuLabel:    { color: Colors.black, fontSize: FontSize.md, fontWeight: '600' },
   separator:    { height: 1, backgroundColor: Colors.gray100, marginHorizontal: Spacing.md },
+
+  printerBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    backgroundColor: Colors.white,
+    borderRadius: Radius.lg,
+    padding: Spacing.md,
+    marginBottom: Spacing.lg,
+  },
+  printerIconWrap: { width: 44, height: 44, borderRadius: Radius.md, backgroundColor: Colors.warning, alignItems: 'center', justifyContent: 'center' },
+  printerTitle: { color: Colors.black, fontSize: FontSize.md, fontWeight: '700', marginBottom: 2 },
+  printerSubtitle: { color: Colors.gray500, fontSize: FontSize.xs },
 
   logoutBtn: {
     flexDirection: 'row',

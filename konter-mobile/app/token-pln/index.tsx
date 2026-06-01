@@ -177,6 +177,8 @@ export default function TokenPlnScreen() {
     setSelectedProduct(product);
   };
 
+  const [successData, setSuccessData] = useState<any>(null);
+
   const handleConfirmPurchase = async () => {
     if (!selectedProduct || !meterNo) return;
 
@@ -215,18 +217,28 @@ export default function TokenPlnScreen() {
       }
 
       setIsPurchasing(false);
-      setSelectedProduct(null);
-      setMeterNo('');
-
+      
       if (data.success) {
-        Alert.alert(
-          data.status === 'sukses' ? 'Berhasil' : 'Menunggu',
-          data.status === 'sukses'
-            ? `Token berhasil!\nToken: ${data.sn || '-'}`
-            : 'Transaksi sedang diproses.',
-          [{ text: 'OK', onPress: () => router.push('/(tabs)/transaksi') }]
-        );
+        if (data.status === 'sukses') {
+          setSuccessData({
+            ...data,
+            product: selectedProduct,
+            meterNo: meterNo,
+            customerName: customerName,
+          });
+          setSelectedProduct(null);
+          // Keep meterNo for now to show on receipt, clear it when modal closes
+        } else {
+          setSelectedProduct(null);
+          setMeterNo('');
+          Alert.alert(
+            'Menunggu',
+            'Transaksi sedang diproses.',
+            [{ text: 'OK', onPress: () => router.push('/(tabs)/transaksi') }]
+          );
+        }
       } else {
+        setSelectedProduct(null);
         Alert.alert('Gagal', data.error || 'Transaksi gagal.');
       }
     } catch (error) {
@@ -234,6 +246,40 @@ export default function TokenPlnScreen() {
       setIsPurchasing(false);
       setSelectedProduct(null);
       Alert.alert('Error', 'Tidak bisa terhubung ke server.');
+    }
+  };
+
+  const handlePrintReceipt = async () => {
+    if (!successData) return;
+    try {
+      const { BluetoothManager, BluetoothEscposPrinter, printReceiptPln } = require('@/utils/printer');
+      if (!BluetoothManager) {
+        Alert.alert('Gagal', 'Printer tidak didukung di Expo Go. Harap build aplikasi.');
+        return;
+      }
+      
+      const isEnabled = await BluetoothManager.isBluetoothEnabled();
+      if (!isEnabled) {
+        Alert.alert('Bluetooth Mati', 'Mohon nyalakan Bluetooth.');
+        return;
+      }
+
+      // We assume connected already. In real app we might need to check if it's really connected.
+      await printReceiptPln(BluetoothEscposPrinter, {
+        idpel: successData.meterNo,
+        nama: successData.customerName?.replace('⚠ ', '') || '-',
+        trfDaya: 'R1/450', // placeholder, idealy parsed from digiflazz SN or name inquiry
+        nominal: `RP. ${successData.product.harga_jual.toLocaleString('id-ID')},00`,
+        rpToken: `RP. ${successData.product.harga_jual.toLocaleString('id-ID')},00`,
+        jmlKwh: '-',
+        admin: 'RP. 0,00',
+        total: `RP. ${successData.product.harga_jual.toLocaleString('id-ID')},00`,
+        token: successData.sn || 'SEDANG DIPROSES'
+      });
+      
+    } catch (error) {
+      console.error('Print Error:', error);
+      Alert.alert('Gagal Cetak', 'Pastikan printer bluetooth sudah terhubung.');
     }
   };
 
@@ -360,13 +406,59 @@ export default function TokenPlnScreen() {
       )}
 
       <PurchaseModal
-        visible={!!selectedProduct && !isPurchasing}
+        visible={!!selectedProduct && !isPurchasing && !successData}
         product={selectedProduct}
         meterNo={meterNo}
         customerName={customerName}
         onClose={() => setSelectedProduct(null)}
         onConfirm={handleConfirmPurchase}
       />
+
+      {/* Success Modal */}
+      {successData && (
+        <View style={styles.modalOverlay}>
+          <View style={[styles.modalCard, { alignItems: 'center', paddingVertical: Spacing.xl }]}>
+            <View style={{ width: 64, height: 64, borderRadius: 32, backgroundColor: Colors.success + '20', alignItems: 'center', justifyContent: 'center', marginBottom: 16 }}>
+              <Ionicons name="checkmark-circle" size={40} color={Colors.success} />
+            </View>
+            <Text style={{ fontSize: FontSize.xl, fontWeight: '800', color: Colors.black, marginBottom: 8 }}>
+              Pembelian Berhasil
+            </Text>
+            <Text style={{ fontSize: FontSize.sm, color: Colors.gray500, textAlign: 'center', marginBottom: 24, lineHeight: 22 }}>
+              Token PLN untuk {successData.meterNo} berhasil dibeli.
+            </Text>
+            
+            <View style={{ backgroundColor: Colors.gray50, width: '100%', padding: Spacing.md, borderRadius: Radius.lg, marginBottom: 24 }}>
+              <Text style={{ fontSize: FontSize.xs, color: Colors.gray500, textAlign: 'center', marginBottom: 8, fontWeight: '600' }}>
+                KODE TOKEN ANDA:
+              </Text>
+              <Text style={{ fontSize: FontSize.xl, fontWeight: '800', color: Colors.primary, textAlign: 'center', letterSpacing: 2 }}>
+                {successData.sn || 'SEDANG DIPROSES'}
+              </Text>
+            </View>
+
+            <View style={{ flexDirection: 'row', gap: 12, width: '100%' }}>
+              <TouchableOpacity 
+                style={{ flex: 1, backgroundColor: Colors.gray100, borderRadius: Radius.lg, paddingVertical: 14, alignItems: 'center' }} 
+                onPress={() => {
+                  setSuccessData(null);
+                  setMeterNo('');
+                  router.push('/(tabs)/transaksi');
+                }}
+              >
+                <Text style={{ color: Colors.gray600, fontSize: FontSize.md, fontWeight: '700' }}>Tutup</Text>
+              </TouchableOpacity>
+              <TouchableOpacity 
+                style={{ flex: 1, backgroundColor: Colors.primary, borderRadius: Radius.lg, paddingVertical: 14, alignItems: 'center', flexDirection: 'row', justifyContent: 'center', gap: 8 }} 
+                onPress={handlePrintReceipt}
+              >
+                <Ionicons name="print" size={20} color="#fff" />
+                <Text style={{ color: '#fff', fontSize: FontSize.md, fontWeight: '700' }}>Cetak Struk</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      )}
     </KeyboardAvoidingView>
   );
 }
