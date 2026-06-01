@@ -197,7 +197,7 @@ export default function DepositScreen() {
               
               <TouchableOpacity 
                 style={styles.doneBtn}
-                onPress={() => router.replace('/(tabs)/')}
+                onPress={() => router.replace('/(tabs)')}
               >
                 <Text style={styles.doneBtnText}>Saya Sudah Transfer</Text>
               </TouchableOpacity>

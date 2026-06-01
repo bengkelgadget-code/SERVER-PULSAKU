@@ -7,7 +7,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Colors, Spacing, Radius, FontSize, Shadow } from '@/constants/theme';
 import { useAuth } from '@/contexts/AuthContext';
 import { getTransactions, getTransactionStats, TransactionFilter } from '@/services/transaction.service';
-import { Transaction } from '@/lib/supabase';
+import { Transaction, supabase } from '@/lib/supabase';
 
 const STATUS_BAR_HEIGHT = Platform.OS === 'ios' ? 44 : (StatusBar.currentHeight ?? 24);
 
@@ -66,12 +66,73 @@ export default function TransaksiScreen() {
   const [stats, setStats] = useState({ totalCount: 0, successCount: 0, failedCount: 0, totalExpense: 0, totalDeposit: 0 });
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [toast, setToast] = useState<{ message: string; type: 'sukses' | 'gagal' } | null>(null);
+  
+  const toastTimeoutRef = React.useRef<any>(null);
 
+  const showToast = (message: string, type: 'sukses' | 'gagal') => {
+    if (toastTimeoutRef.current) {
+      clearTimeout(toastTimeoutRef.current);
+    }
+    setToast({ message, type });
+    toastTimeoutRef.current = setTimeout(() => {
+      setToast(null);
+    }, 4500);
+  };
+
+  // 1. Load data when filter or user changes
   useEffect(() => {
     if (user?.id) {
       loadData();
     }
   }, [user?.id, activeFilter]);
+
+  // 2. Realtime listener for transaction updates and inserts
+  useEffect(() => {
+    if (!user?.id) return;
+
+    console.log(`[Realtime] Subscribing to transactions for user: ${user.id}`);
+    
+    const channel = supabase
+      .channel(`user-tx-updates-${user.id}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*', // Listen to INSERT, UPDATE, DELETE
+          schema: 'public',
+          table: 'transactions',
+          filter: `user_id=eq.${user.id}`,
+        },
+        async (payload) => {
+          console.log('[Realtime] Transaction event received:', payload.eventType, payload);
+          
+          // Re-fetch transactions & stats automatically
+          await loadData();
+
+          if (payload.eventType === 'UPDATE') {
+            const newTx = payload.new as any;
+            const oldTx = payload.old as any;
+
+            if (newTx && oldTx && newTx.status !== oldTx.status) {
+              if (newTx.status === 'sukses') {
+                showToast(`Transaksi ${newTx.type || 'Produk'} Berhasil! Nomor: ${newTx.customer_no || ''}`, 'sukses');
+              } else if (newTx.status === 'gagal') {
+                showToast(`Transaksi ${newTx.type || 'Produk'} Gagal! Saldo Anda telah dikembalikan.`, 'gagal');
+              }
+            }
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      console.log('[Realtime] Unsubscribing from transactions channel...');
+      supabase.removeChannel(channel);
+      if (toastTimeoutRef.current) {
+        clearTimeout(toastTimeoutRef.current);
+      }
+    };
+  }, [user?.id]);
 
   const loadData = async () => {
     if (!user?.id) return;
@@ -100,6 +161,34 @@ export default function TransaksiScreen() {
 
   return (
     <View style={styles.container}>
+      {/* Floating Toast Notification */}
+      {toast && (
+        <View style={[
+          styles.toastContainer,
+          Shadow.md,
+          toast.type === 'sukses' ? styles.toastSuccess : styles.toastFailed
+        ]}>
+          <Ionicons
+            name={toast.type === 'sukses' ? 'checkmark-circle' : 'close-circle'}
+            size={20}
+            color={toast.type === 'sukses' ? Colors.accent : Colors.error}
+          />
+          <Text style={[
+            styles.toastText,
+            { color: toast.type === 'sukses' ? Colors.accent : Colors.error }
+          ]}>
+            {toast.message}
+          </Text>
+          <TouchableOpacity onPress={() => setToast(null)} style={styles.toastCloseBtn}>
+            <Ionicons
+              name="close"
+              size={16}
+              color={toast.type === 'sukses' ? Colors.accent : Colors.error}
+              style={{ opacity: 0.6 }}
+            />
+          </TouchableOpacity>
+        </View>
+      )}
       <LinearGradient
         colors={Colors.gradientPrimary}
         style={styles.header}
@@ -176,6 +265,36 @@ export default function TransaksiScreen() {
 
 const styles = StyleSheet.create({
   container:  { flex: 1, backgroundColor: Colors.gray50 },
+  
+  toastContainer: {
+    position: 'absolute',
+    top: STATUS_BAR_HEIGHT + 60, // Place it right below the header
+    left: Spacing.md,
+    right: Spacing.md,
+    zIndex: 999,
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 14,
+    borderRadius: Radius.md,
+    borderWidth: 1,
+    gap: 8,
+  },
+  toastSuccess: {
+    backgroundColor: '#ECFDF5', // emerald 50
+    borderColor: '#A7F3D0',     // emerald 200
+  },
+  toastFailed: {
+    backgroundColor: '#FEF2F2',  // red 50
+    borderColor: '#FCA5A5',      // red 300
+  },
+  toastText: {
+    flex: 1,
+    fontSize: FontSize.sm,
+    fontWeight: '700',
+  },
+  toastCloseBtn: {
+    padding: 2,
+  },
   header:     { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingTop: STATUS_BAR_HEIGHT + 8, paddingBottom: 16, paddingHorizontal: Spacing.md },
   headerTitle: { color: '#fff', fontSize: FontSize.lg, fontWeight: '700' },
   headerIconBtn:{ width: 36, height: 36, alignItems: 'center', justifyContent: 'center' },
