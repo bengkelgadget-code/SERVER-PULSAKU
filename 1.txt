@@ -9,4 +9,8 @@ BorneoPay
 app.moota.co
 bengkelgadget.l2@gmail.com
 B3n6k3lG4dg3tL2@
+
+oracle
+bengkelgadget.l2@gmail.com
+pass : B3n6k3lG4dg3tL2@
    

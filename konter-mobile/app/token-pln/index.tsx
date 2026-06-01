@@ -37,6 +37,7 @@ function PurchaseModal({
   visible: boolean;
   product: PulsaProduct | null;
   meterNo: string;
+  customerName: string;
   onClose: () => void;
   onConfirm: () => void;
 }) {
@@ -54,6 +55,12 @@ function PurchaseModal({
           <Text style={styles.modalLabel}>No. Meter</Text>
           <Text style={styles.modalValue}>{meterNo}</Text>
         </View>
+        {customerName ? (
+          <View style={styles.modalDetailRow}>
+            <Text style={styles.modalLabel}>Nama Pemilik</Text>
+            <Text style={styles.modalValue}>{customerName.replace('⚠ ', '')}</Text>
+          </View>
+        ) : null}
         <View style={[styles.modalDetailRow, { borderBottomWidth: 0 }]}>
           <Text style={styles.modalLabel}>Total Bayar</Text>
           <Text style={[styles.modalValue, styles.modalPrice]}>
@@ -356,6 +363,7 @@ export default function TokenPlnScreen() {
         visible={!!selectedProduct && !isPurchasing}
         product={selectedProduct}
         meterNo={meterNo}
+        customerName={customerName}
         onClose={() => setSelectedProduct(null)}
         onConfirm={handleConfirmPurchase}
       />
