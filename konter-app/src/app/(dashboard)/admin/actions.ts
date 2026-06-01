@@ -17,6 +17,7 @@ export async function updateProductPrice(formData: FormData): Promise<void> {
     throw new Error('SKU atau harga jual tidak valid')
   }
 
+  const { createClient, createAdminClient } = await import('@/infrastructure/supabase/server')
   const supabase = await createClient()
 
   // Get current user for validation & logs
@@ -32,9 +33,15 @@ export async function updateProductPrice(formData: FormData): Promise<void> {
     .eq('id', user.id)
     .single()
 
+  if (userData?.role !== 'admin' && userData?.role !== 'superadmin') {
+    throw new Error('Hanya admin yang dapat mengubah harga produk')
+  }
+
   console.log(`[Price Update] User: ${user.email}, Role: ${userData?.role}, SKU: ${sku_code}, New Price: ${harga_jual}`)
 
-  const { data, error } = await supabase
+  const supabaseAdmin = createAdminClient()
+
+  const { data, error } = await supabaseAdmin
     .from('products')
     .update({ harga_jual })
     .eq('sku_code', sku_code)
@@ -46,8 +53,8 @@ export async function updateProductPrice(formData: FormData): Promise<void> {
   }
 
   if (!data || data.length === 0) {
-    console.error(`[Price Update] Error: No rows updated for SKU ${sku_code}. RLS policy check failed or SKU not found.`)
-    throw new Error('Gagal menyimpan harga: Tidak memiliki izin (RLS) atau produk tidak ditemukan.')
+    console.error(`[Price Update] Error: No rows updated for SKU ${sku_code}. SKU not found.`)
+    throw new Error('Gagal menyimpan harga: Produk tidak ditemukan.')
   }
 
   console.log("[Price Update] Database update successful:", data)
@@ -91,7 +98,10 @@ export async function updateProductPriceClient(formData: FormData): Promise<{ su
 
     console.log(`[Price Update] User: ${user.email}, Role: ${userData?.role}, SKU: ${sku_code}, New Price: ${harga_jual}`)
 
-    const { data, error } = await supabase
+    const { createAdminClient } = await import('@/infrastructure/supabase/server')
+    const supabaseAdmin = createAdminClient()
+
+    const { data, error } = await supabaseAdmin
       .from('products')
       .update({ harga_jual })
       .eq('sku_code', sku_code)
@@ -124,9 +134,20 @@ export async function toggleProductStatus(formData: FormData): Promise<void> {
   const sku_code = formData.get('sku_code') as string
   const current_status = formData.get('current_status') === 'true'
 
+  const { createClient, createAdminClient } = await import('@/infrastructure/supabase/server')
   const supabase = await createClient()
 
-  await supabase
+  // Verify auth
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) throw new Error('Unauthorized')
+  const { data: userData } = await supabase.from('users').select('role').eq('id', user.id).single()
+  if (userData?.role !== 'admin' && userData?.role !== 'superadmin') {
+    throw new Error('Hanya admin yang dapat mengubah status produk')
+  }
+
+  const supabaseAdmin = createAdminClient()
+
+  await supabaseAdmin
     .from('products')
     .update({ is_active: !current_status })
     .eq('sku_code', sku_code)
@@ -137,9 +158,20 @@ export async function toggleProductStatus(formData: FormData): Promise<void> {
 export async function deleteProductAction(formData: FormData): Promise<void> {
   const sku_code = formData.get('sku_code') as string
 
+  const { createClient, createAdminClient } = await import('@/infrastructure/supabase/server')
   const supabase = await createClient()
 
-  await supabase
+  // Verify auth
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) throw new Error('Unauthorized')
+  const { data: userData } = await supabase.from('users').select('role').eq('id', user.id).single()
+  if (userData?.role !== 'admin' && userData?.role !== 'superadmin') {
+    throw new Error('Hanya admin yang dapat menghapus produk')
+  }
+
+  const supabaseAdmin = createAdminClient()
+
+  await supabaseAdmin
     .from('products')
     .delete()
     .eq('sku_code', sku_code)

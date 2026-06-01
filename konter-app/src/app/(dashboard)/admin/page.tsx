@@ -4,6 +4,10 @@ import { syncProductsAction } from './actions'
 import { ProductFilters } from '@/components/ProductFilters'
 import { ProductTableClient } from './ProductTableClient'
 
+export const dynamic = 'force-dynamic'
+export const revalidate = 0
+
+
 export default async function AdminProductsPage({ searchParams }: { searchParams: Promise<Record<string, string | undefined>> }) {
   const supabase = await createClient()
   const sp = await searchParams
