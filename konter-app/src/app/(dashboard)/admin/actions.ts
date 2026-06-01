@@ -23,7 +23,7 @@ export async function updateProductPrice(formData: FormData): Promise<void> {
   const { data: { user }, error: authError } = await supabase.auth.getUser()
   if (authError || !user) {
     console.error("Auth error in updateProductPrice:", authError)
-    throw new Error('Unauthorized')
+    throw new Error('Unauthorized: Sesi kedaluwarsa atau belum login')
   }
 
   const { data: userData } = await supabase
@@ -53,6 +53,15 @@ export async function updateProductPrice(formData: FormData): Promise<void> {
   console.log("[Price Update] Database update successful:", data)
 
   revalidatePath('/admin')
+}
+
+export async function updateProductPriceClient(formData: FormData): Promise<{ success: boolean; error?: string }> {
+  try {
+    await updateProductPrice(formData)
+    return { success: true }
+  } catch (err: any) {
+    return { success: false, error: err.message || 'Terjadi kesalahan sistem internal' }
+  }
 }
 
 export async function toggleProductStatus(formData: FormData): Promise<void> {

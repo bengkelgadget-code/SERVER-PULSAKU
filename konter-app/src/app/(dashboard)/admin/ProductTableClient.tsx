@@ -5,7 +5,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Check, Loader2 } from 'lucide-react'
-import { updateProductPrice, toggleProductStatus } from './actions'
+import { updateProductPriceClient, toggleProductStatus } from './actions'
 
 interface ProductTableClientProps {
   initialProducts: any[]
@@ -88,7 +88,10 @@ export function ProductTableClient({ initialProducts }: ProductTableClientProps)
       formData.append('sku_code', sku)
       formData.append('harga_jual', cleanPrice)
       
-      await updateProductPrice(formData)
+      const res = await updateProductPriceClient(formData)
+      if (!res.success) {
+        throw new Error(res.error || 'Gagal menyimpan harga')
+      }
       
       // Update local state value
       setProducts(prev => prev.map(p => {
