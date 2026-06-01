@@ -13,12 +13,39 @@ export async function updateProductPrice(formData: FormData): Promise<void> {
   const sku_code = formData.get('sku_code') as string
   const harga_jual = parseFloat(formData.get('harga_jual') as string)
 
+  if (!sku_code || isNaN(harga_jual)) {
+    throw new Error('SKU atau harga jual tidak valid')
+  }
+
   const supabase = await createClient()
 
-  await supabase
+  // Get current user for validation & logs
+  const { data: { user }, error: authError } = await supabase.auth.getUser()
+  if (authError || !user) {
+    console.error("Auth error in updateProductPrice:", authError)
+    throw new Error('Unauthorized')
+  }
+
+  const { data: userData } = await supabase
+    .from('users')
+    .select('role')
+    .eq('id', user.id)
+    .single()
+
+  console.log(`[Price Update] User: ${user.email}, Role: ${userData?.role}, SKU: ${sku_code}, New Price: ${harga_jual}`)
+
+  const { data, error } = await supabase
     .from('products')
     .update({ harga_jual })
     .eq('sku_code', sku_code)
+    .select()
+
+  if (error) {
+    console.error("Supabase error updating price:", error.message, error.details)
+    throw new Error(error.message)
+  }
+
+  console.log("[Price Update] Database update successful:", data)
 
   revalidatePath('/admin')
 }
