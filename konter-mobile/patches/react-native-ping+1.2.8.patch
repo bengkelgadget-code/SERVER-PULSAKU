@@ -1,0 +1,12 @@
+diff --git a/node_modules/react-native-ping/android/build.gradle b/node_modules/react-native-ping/android/build.gradle
+index 1e827f0..a97ce07 100644
+--- a/node_modules/react-native-ping/android/build.gradle
++++ b/node_modules/react-native-ping/android/build.gradle
+@@ -28,6 +28,7 @@ buildscript {
+ apply plugin: 'com.android.library'
+ 
+ android {
++    namespace 'com.reactlibrary.LHPing'
+     compileSdkVersion safeExtGet('compileSdkVersion', DEFAULT_COMPILE_SDK_VERSION)
+     buildToolsVersion safeExtGet('buildToolsVersion', DEFAULT_BUILD_TOOLS_VERSION)
+     defaultConfig {
