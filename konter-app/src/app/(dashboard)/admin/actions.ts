@@ -56,10 +56,66 @@ export async function updateProductPrice(formData: FormData): Promise<void> {
 }
 
 export async function updateProductPriceClient(formData: FormData): Promise<{ success: boolean; error?: string }> {
+  const sku_code = formData.get('sku_code') as string
+  const harga_jual = parseFloat(formData.get('harga_jual') as string)
+
+  if (!sku_code || isNaN(harga_jual)) {
+    return { success: false, error: 'SKU atau harga jual tidak valid' }
+  }
+
   try {
-    await updateProductPrice(formData)
+    const supabase = await createClient()
+
+    // Get current user for validation & logs
+    const { data: { user }, error: authError } = await supabase.auth.getUser()
+    if (authError || !user) {
+      console.error("Auth error in updateProductPriceClient:", authError)
+      return { success: false, error: 'Unauthorized: Sesi kedaluwarsa atau belum login' }
+    }
+
+    // Fetch user profile
+    const { data: userData } = await supabase
+      .from('users')
+      .select('role')
+      .eq('id', user.id)
+      .single()
+
+    // Diagnostic SELECT check to see if the product is even visible to this user
+    const { data: selectData, error: selectError } = await supabase
+      .from('products')
+      .select('*')
+      .eq('sku_code', sku_code)
+
+    const canSelect = selectData && selectData.length > 0
+    const selectErrText = selectError ? selectError.message : 'none'
+
+    console.log(`[Price Update] User: ${user.email}, Role: ${userData?.role}, SKU: ${sku_code}, New Price: ${harga_jual}`)
+
+    const { data, error } = await supabase
+      .from('products')
+      .update({ harga_jual })
+      .eq('sku_code', sku_code)
+      .select()
+
+    if (error) {
+      console.error("Supabase error updating price:", error.message, error.details)
+      return { success: false, error: `Supabase Error: ${error.message}` }
+    }
+
+    if (!data || data.length === 0) {
+      console.error(`[Price Update] Error: No rows updated for SKU ${sku_code}. RLS policy check failed or SKU not found.`)
+      return { 
+        success: false, 
+        error: `Izin Ditolak (RLS). Diagnostik: User=${user.email}, Role=${userData?.role || 'null'}, SKU=${sku_code}, Terlihat=${canSelect ? 'Ya' : 'Tidak'} (selectErr: ${selectErrText})`
+      }
+    }
+
+    console.log("[Price Update] Database update successful:", data)
+
+    revalidatePath('/admin')
     return { success: true }
   } catch (err: any) {
+    console.error("Fatal error in updateProductPriceClient:", err)
     return { success: false, error: err.message || 'Terjadi kesalahan sistem internal' }
   }
 }
