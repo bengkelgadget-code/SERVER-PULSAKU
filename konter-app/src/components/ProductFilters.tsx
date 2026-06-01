@@ -35,7 +35,7 @@ export function ProductFilters({
   }
 
   return (
-    <div className="flex flex-col sm:flex-row gap-4 mb-4 bg-zinc-50 dark:bg-zinc-900 p-4 rounded-xl border">
+    <div className="flex flex-col sm:flex-row gap-3 mb-2 bg-zinc-50 dark:bg-zinc-900 p-3 rounded-xl border">
       <div className="flex-1">
         <label className="block text-sm font-medium mb-1">Kategori</label>
         <select 
