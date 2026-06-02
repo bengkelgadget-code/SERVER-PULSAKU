@@ -1,8 +1,8 @@
 import { digiflazz } from '@/infrastructure/digiflazz/client';
-import { createClient } from '@/infrastructure/supabase/server';
+import { createAdminClient } from '@/infrastructure/supabase/server';
 
 export async function syncDigiFlazzProducts() {
-  const supabase = await createClient();
+  const supabase = createAdminClient();
 
   try {
     // Fetch BOTH prepaid and postpaid (which includes PLN Token)

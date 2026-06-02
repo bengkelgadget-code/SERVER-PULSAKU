@@ -5,7 +5,21 @@ import { createClient } from '@/infrastructure/supabase/server'
 import { revalidatePath } from 'next/cache'
 
 export async function syncProductsAction(): Promise<void> {
-  await syncDigiFlazzProducts()
+  const { createClient } = await import('@/infrastructure/supabase/server')
+  const supabase = await createClient()
+
+  // Verify auth
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) throw new Error('Unauthorized')
+  const { data: userData } = await supabase.from('users').select('role').eq('id', user.id).single()
+  if (userData?.role !== 'admin' && userData?.role !== 'superadmin') {
+    throw new Error('Hanya admin yang dapat sinkronisasi produk')
+  }
+
+  const result = await syncDigiFlazzProducts()
+  if (!result.success) {
+    throw new Error(result.error)
+  }
   revalidatePath('/admin')
 }
 
