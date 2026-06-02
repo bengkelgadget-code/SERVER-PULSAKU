@@ -3,15 +3,8 @@ import { Platform } from 'react-native';
 // Safely import the printer module so it doesn't crash Expo Go if the native module is missing
 let BLEPrinter: any = null;
 
-try {
-  if (Platform.OS !== 'web') {
-    const ThermalPrinter = require('react-native-thermal-receipt-printer-image-qr');
-    BLEPrinter = ThermalPrinter.BLEPrinter;
-  }
-} catch (error) {
-  console.warn('Bluetooth printer module not found or failed to load. This is expected in Expo Go:', error);
-}
-
+// The thermal printer library was removed due to New Architecture incompatibility.
+// BLEPrinter remains null, so Bluetooth printing is currently disabled.
 // Wrapper for BluetoothManager to match previous expectations in app code
 export const BluetoothManager = {
   isBluetoothEnabled: async () => {
