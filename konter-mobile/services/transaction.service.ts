@@ -50,7 +50,7 @@ export async function getTransactions(
     harga_jual: trx.harga_jual,
     type: trx.sku_code?.startsWith('PLN') ? 'Token PLN' : 'Pulsa',
     detail: trx.ref_id,
-    amount: trx.harga_jual,
+    amount: -Math.abs(trx.harga_jual || 0),
     status: trx.status,
     sn: trx.sn,
     created_at: trx.created_at,

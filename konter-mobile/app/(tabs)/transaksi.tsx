@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import {
-  View, Text, StyleSheet, FlatList, TouchableOpacity, Platform, StatusBar, ActivityIndicator, RefreshControl,
+  View, Text, StyleSheet, FlatList, TouchableOpacity, Platform, StatusBar, ActivityIndicator, RefreshControl, Modal, Alert
 } from 'react-native';
+import * as Print from 'expo-print';
+import * as Sharing from 'expo-sharing';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors, Spacing, Radius, FontSize, Shadow } from '@/constants/theme';
@@ -26,12 +28,12 @@ const TYPE_ICON: Record<string, string> = {
 
 const FILTERS: TransactionFilter[] = ['Semua', 'Sukses', 'Proses', 'Gagal'];
 
-function TransactionItem({ item }: { item: Transaction }) {
+function TransactionItem({ item, onPress }: { item: Transaction; onPress: () => void }) {
   const cfg = STATUS_CONFIG[item.status as keyof typeof STATUS_CONFIG] || STATUS_CONFIG.pending;
   const isCredit = (item.amount ?? 0) > 0;
 
   return (
-    <View style={[styles.txCard, Shadow.sm]}>
+    <TouchableOpacity style={[styles.txCard, Shadow.sm]} onPress={onPress} activeOpacity={0.7}>
       <View style={[styles.txIcon, { backgroundColor: isCredit ? Colors.accentBg : Colors.primaryBg }]}>
         <Ionicons
           name={(TYPE_ICON[item.type] ?? 'swap-horizontal-outline') as any}
@@ -55,7 +57,7 @@ function TransactionItem({ item }: { item: Transaction }) {
           <Text style={[styles.statusText, { color: cfg.color }]}>{cfg.label}</Text>
         </View>
       </View>
-    </View>
+    </TouchableOpacity>
   );
 }
 
@@ -67,6 +69,7 @@ export default function TransaksiScreen() {
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [toast, setToast] = useState<{ message: string; type: 'sukses' | 'gagal' } | null>(null);
+  const [selectedTx, setSelectedTx] = useState<Transaction | null>(null);
   
   const toastTimeoutRef = React.useRef<any>(null);
 
@@ -157,6 +160,79 @@ export default function TransaksiScreen() {
     loadData();
   };
 
+  const handlePrintShare = async (tx: Transaction) => {
+    try {
+      const htmlContent = `
+        <html>
+          <head>
+            <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no" />
+            <style>
+              body { font-family: 'Helvetica Neue', 'Helvetica', sans-serif; padding: 20px; color: #333; }
+              .header { text-align: center; border-bottom: 2px dashed #ccc; padding-bottom: 10px; margin-bottom: 20px; }
+              .title { font-size: 24px; font-weight: bold; margin: 0; }
+              .subtitle { font-size: 14px; color: #666; margin-top: 5px; }
+              .row { display: flex; justify-content: space-between; margin-bottom: 10px; font-size: 14px; }
+              .row-bold { font-weight: bold; font-size: 16px; margin-top: 15px; border-top: 1px solid #eee; padding-top: 15px; }
+              .footer { text-align: center; margin-top: 40px; font-size: 12px; color: #888; }
+            </style>
+          </head>
+          <body>
+            <div class="header">
+              <h1 class="title">BENGKEL GADGET</h1>
+              <p class="subtitle">Struk Transaksi Digital</p>
+            </div>
+            
+            <div class="row">
+              <span>Waktu</span>
+              <span>${new Date(tx.created_at).toLocaleString('id-ID')}</span>
+            </div>
+            <div class="row">
+              <span>No. Transaksi</span>
+              <span>${tx.id.substring(0, 8).toUpperCase()}</span>
+            </div>
+            <div class="row">
+              <span>Status</span>
+              <span style="font-weight: bold; color: ${tx.status === 'sukses' ? '#10B981' : tx.status === 'gagal' ? '#EF4444' : '#F59E0B'}">
+                ${tx.status.toUpperCase()}
+              </span>
+            </div>
+            
+            <div style="margin: 20px 0; border-top: 1px solid #eee; padding-top: 15px;">
+              <div class="row">
+                <span>Produk</span>
+                <span style="text-align: right; max-width: 60%;">${tx.type}</span>
+              </div>
+              <div class="row">
+                <span>Tujuan</span>
+                <span>${tx.customer_no || '-'}</span>
+              </div>
+              <div class="row">
+                <span>SN / Ref</span>
+                <span style="font-size: 12px;">${tx.sn || tx.ref_id || '-'}</span>
+              </div>
+            </div>
+
+            <div class="row row-bold">
+              <span>Total Harga</span>
+              <span>Rp ${Math.abs(tx.amount ?? 0).toLocaleString('id-ID')}</span>
+            </div>
+
+            <div class="footer">
+              <p>Terima kasih telah bertransaksi di Bengkel Gadget.</p>
+              <p>Simpan struk ini sebagai bukti pembayaran yang sah.</p>
+            </div>
+          </body>
+        </html>
+      `;
+
+      const { uri } = await Print.printToFileAsync({ html: htmlContent });
+      await Sharing.shareAsync(uri, { UTI: '.pdf', mimeType: 'application/pdf' });
+    } catch (error) {
+      console.error('Error generating receipt:', error);
+      Alert.alert('Gagal', 'Tidak dapat membuat atau membagikan struk transaksi.');
+    }
+  };
+
   const filtered = transactions;
 
   return (
@@ -189,6 +265,71 @@ export default function TransaksiScreen() {
           </TouchableOpacity>
         </View>
       )}
+
+      {/* Receipt Modal */}
+      <Modal
+        visible={!!selectedTx}
+        animationType="slide"
+        transparent={true}
+        onRequestClose={() => setSelectedTx(null)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Detail Transaksi</Text>
+              <TouchableOpacity onPress={() => setSelectedTx(null)} style={styles.modalCloseBtn}>
+                <Ionicons name="close" size={24} color={Colors.gray500} />
+              </TouchableOpacity>
+            </View>
+            
+            {selectedTx && (
+              <View style={styles.receiptBody}>
+                <View style={styles.receiptRow}>
+                  <Text style={styles.receiptLabel}>Status</Text>
+                  <View style={[styles.statusBadge, { backgroundColor: STATUS_CONFIG[selectedTx.status as keyof typeof STATUS_CONFIG]?.bg || Colors.gray200 }]}>
+                    <Text style={[styles.statusText, { color: STATUS_CONFIG[selectedTx.status as keyof typeof STATUS_CONFIG]?.color || Colors.black }]}>
+                      {STATUS_CONFIG[selectedTx.status as keyof typeof STATUS_CONFIG]?.label || 'Pending'}
+                    </Text>
+                  </View>
+                </View>
+                <View style={styles.receiptRow}>
+                  <Text style={styles.receiptLabel}>Tanggal</Text>
+                  <Text style={styles.receiptValue}>{new Date(selectedTx.created_at).toLocaleString('id-ID')}</Text>
+                </View>
+                <View style={styles.receiptRow}>
+                  <Text style={styles.receiptLabel}>Produk</Text>
+                  <Text style={styles.receiptValue}>{selectedTx.type}</Text>
+                </View>
+                <View style={styles.receiptRow}>
+                  <Text style={styles.receiptLabel}>Nomor Tujuan</Text>
+                  <Text style={styles.receiptValue}>{selectedTx.customer_no || '-'}</Text>
+                </View>
+                <View style={styles.receiptRow}>
+                  <Text style={styles.receiptLabel}>SN / Ref</Text>
+                  <Text style={styles.receiptValue}>{selectedTx.sn || selectedTx.ref_id || '-'}</Text>
+                </View>
+                
+                <View style={styles.receiptDivider} />
+                
+                <View style={styles.receiptRow}>
+                  <Text style={styles.receiptLabelBold}>Total Bayar</Text>
+                  <Text style={styles.receiptAmount}>Rp {Math.abs(selectedTx.amount ?? 0).toLocaleString('id-ID')}</Text>
+                </View>
+
+                <TouchableOpacity 
+                  style={styles.printBtn} 
+                  activeOpacity={0.8}
+                  onPress={() => handlePrintShare(selectedTx)}
+                >
+                  <Ionicons name="share-outline" size={20} color="#fff" />
+                  <Text style={styles.printBtnText}>Bagikan / Cetak PDF</Text>
+                </TouchableOpacity>
+              </View>
+            )}
+          </View>
+        </View>
+      </Modal>
+
       <LinearGradient
         colors={Colors.gradientPrimary}
         style={styles.header}
@@ -243,7 +384,7 @@ export default function TransaksiScreen() {
             colors={[Colors.primary]}
           />
         }
-        renderItem={({ item }) => <TransactionItem item={item} />}
+        renderItem={({ item }) => <TransactionItem item={item} onPress={() => setSelectedTx(item)} />}
         ListEmptyComponent={
           isLoading ? (
             <View style={styles.emptyState}>
@@ -326,4 +467,22 @@ const styles = StyleSheet.create({
   emptyState: { alignItems: 'center', paddingVertical: 60 },
   emptyTitle: { color: Colors.black, fontSize: FontSize.md, fontWeight: '700', marginTop: Spacing.md },
   emptyText: { color: Colors.gray400, fontSize: FontSize.sm, marginTop: Spacing.xs },
+
+  // Modal Styles
+  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' },
+  modalContent: { backgroundColor: Colors.white, borderTopLeftRadius: Radius.xl, borderTopRightRadius: Radius.xl, padding: Spacing.lg, paddingBottom: Platform.OS === 'ios' ? 40 : Spacing.lg },
+  modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: Spacing.lg },
+  modalTitle: { fontSize: FontSize.lg, fontWeight: '700', color: Colors.black },
+  modalCloseBtn: { padding: 4 },
+  
+  receiptBody: { backgroundColor: Colors.gray50, padding: Spacing.md, borderRadius: Radius.lg, gap: 12 },
+  receiptRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' },
+  receiptLabel: { color: Colors.gray500, fontSize: FontSize.sm },
+  receiptValue: { color: Colors.black, fontSize: FontSize.sm, fontWeight: '600', maxWidth: '60%', textAlign: 'right' },
+  receiptLabelBold: { color: Colors.black, fontSize: FontSize.md, fontWeight: '700' },
+  receiptAmount: { color: Colors.accent, fontSize: FontSize.lg, fontWeight: '800' },
+  receiptDivider: { height: 1, backgroundColor: Colors.gray200, marginVertical: Spacing.xs },
+  
+  printBtn: { backgroundColor: Colors.primary, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', padding: Spacing.md, borderRadius: Radius.lg, marginTop: Spacing.md, gap: 8 },
+  printBtnText: { color: '#fff', fontSize: FontSize.md, fontWeight: '700' },
 });

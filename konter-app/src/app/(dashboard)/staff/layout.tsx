@@ -1,6 +1,7 @@
 import { createClient } from '@/infrastructure/supabase/server'
 import { redirect } from 'next/navigation'
 import { Sidebar } from '@/components/DashboardSidebar'
+import { RealtimeListener } from '@/components/RealtimeListener'
 
 export default async function StaffLayout({ children }: { children: React.ReactNode }) {
   const supabase = await createClient()
@@ -26,6 +27,7 @@ export default async function StaffLayout({ children }: { children: React.ReactN
 
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-zinc-950 relative overflow-hidden">
+      <RealtimeListener userId={user.id} role={userData?.role} />
       {/* Background decorations */}
       <div className="fixed inset-0 bg-grid-slate-200 dark:bg-grid-zinc-800 opacity-50 pointer-events-none" />
       <div className="absolute top-0 left-1/2 w-1/2 h-96 bg-gradient-to-br from-green-500/10 via-emerald-500/5 to-transparent blur-3xl -z-10 pointer-events-none" />
