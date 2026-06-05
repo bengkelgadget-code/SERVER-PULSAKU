@@ -21,26 +21,24 @@ export async function syncDigiFlazzProducts() {
       allProducts = allProducts.concat(postpaidRes.value.data || []);
     }
 
-    // Filter active products only
-    const activeProducts = allProducts.filter(
-      p => p.buyer_product_status === true && p.seller_product_status === true
-    );
-
-    if (activeProducts.length === 0) {
-      return { success: false, error: 'Tidak ada produk aktif dari DigiFlazz' };
+    if (allProducts.length === 0) {
+      return { success: false, error: 'Tidak ada produk dari DigiFlazz' };
     }
 
-    const upsertData = activeProducts.map(p => ({
-      sku_code: p.buyer_sku_code,
-      product_name: p.product_name,
-      category: p.category,
-      brand: p.brand,
-      harga_modal: p.price,
-      // Default markup: modal + 500, minimum 1000 for expensive items
-      harga_jual: Math.max(p.price + 500, Math.round(p.price * 1.03)),
-      is_active: true,
-      updated_at: new Date().toISOString(),
-    }));
+    const upsertData = allProducts.map(p => {
+      const isActive = p.buyer_product_status === true && p.seller_product_status === true;
+      return {
+        sku_code: p.buyer_sku_code,
+        product_name: p.product_name,
+        category: p.category,
+        brand: p.brand,
+        harga_modal: p.price,
+        // Default markup: modal + 500, minimum 1000 for expensive items
+        harga_jual: Math.max(p.price + 500, Math.round(p.price * 1.03)),
+        is_active: isActive,
+        updated_at: new Date().toISOString(),
+      };
+    });
 
     const CHUNK_SIZE = 1000;
     const promises = [];
