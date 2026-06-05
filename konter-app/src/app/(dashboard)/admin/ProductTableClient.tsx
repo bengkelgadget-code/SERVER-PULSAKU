@@ -166,6 +166,18 @@ export function ProductTableClient({ initialProducts }: ProductTableClientProps)
     }
   }
 
+  const handleMatchAllPrices = () => {
+    if (!confirm('Anda yakin ingin menyamakan semua Harga Jual dengan Modal untuk produk di kategori ini?')) return;
+    
+    const newEditedPrices = { ...editedPrices };
+    products.forEach(p => {
+      const formatted = toRupiahString(p.harga_modal);
+      newEditedPrices[p.sku_code] = formatted;
+      handleSave(p.sku_code, formatted);
+    });
+    setEditedPrices(newEditedPrices);
+  }
+
   return (
     <Card className="glass-card border-none overflow-hidden">
       <CardHeader className="bg-primary/5 py-3 px-6 border-b border-border/50">
@@ -181,7 +193,15 @@ export function ProductTableClient({ initialProducts }: ProductTableClientProps)
                 <TableHead className="py-2 text-xs">Product</TableHead>
                 <TableHead className="py-2 text-xs">Brand</TableHead>
                 <TableHead className="whitespace-nowrap py-2 text-xs">Modal (Rp)</TableHead>
-                <TableHead className="whitespace-nowrap py-2 text-xs w-[180px]">Jual (Rp)</TableHead>
+                <TableHead className="whitespace-nowrap py-2 text-xs w-[180px]">
+                  <button 
+                    onClick={handleMatchAllPrices}
+                    className="flex items-center gap-1 hover:text-primary transition-colors font-semibold"
+                    title="Samakan semua Harga Jual dengan Modal"
+                  >
+                    Jual (Rp) <span className="text-[10px] text-primary/70 bg-primary/10 px-1 rounded cursor-pointer">Auto Sama</span>
+                  </button>
+                </TableHead>
                 <TableHead className="whitespace-nowrap py-2 text-xs">Profit/Unit</TableHead>
                 <TableHead className="text-center py-2 text-xs">Active</TableHead>
               </TableRow>
