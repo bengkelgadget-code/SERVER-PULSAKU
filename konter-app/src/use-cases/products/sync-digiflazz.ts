@@ -8,7 +8,7 @@ export async function syncDigiFlazzProducts() {
     // Fetch BOTH prepaid and postpaid (which includes PLN Token)
     const [prepaidRes, postpaidRes] = await Promise.allSettled([
       digiflazz.getPriceList('prepaid'),
-      digiflazz.getPriceList('postpaid'),
+      digiflazz.getPriceList('pasca'),
     ]);
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -25,7 +25,14 @@ export async function syncDigiFlazzProducts() {
       return { success: false, error: 'Tidak ada produk dari DigiFlazz' };
     }
 
-    const upsertData = allProducts.map(p => {
+    // Deduplicate by sku_code
+    const uniqueProductsMap = new Map();
+    for (const p of allProducts) {
+      uniqueProductsMap.set(p.buyer_sku_code, p);
+    }
+    const uniqueProducts = Array.from(uniqueProductsMap.values());
+
+    const upsertData = uniqueProducts.map(p => {
       const isActive = p.buyer_product_status === true && p.seller_product_status === true;
       return {
         sku_code: p.buyer_sku_code,

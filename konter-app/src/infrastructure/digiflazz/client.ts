@@ -93,7 +93,7 @@ export class DigiFlazzClient {
       .digest('hex');
   }
 
-  async getPriceList(command: 'prepaid' | 'postpaid' = 'prepaid'): Promise<DigiFlazzPriceListResponse> {
+  async getPriceList(command: 'prepaid' | 'pasca' = 'prepaid'): Promise<DigiFlazzPriceListResponse> {
     const signature = this.generateSignature('depo');
     
     const response = await this.httpClient.post('/price-list', {
