@@ -19,10 +19,15 @@ export function SyncButton() {
       const data = await res.json()
 
       if (data.success) {
-        setMessage(`Berhasil sync ${data.count} produk!`)
-        setIsError(false)
-        // Reload the page to show updated data
-        setTimeout(() => window.location.reload(), 1500)
+        if (data.count === 0) {
+          setMessage('DigiFlazz sedang membatasi permintaan. Tunggu 5 menit lalu coba lagi.')
+          setIsError(true)
+        } else {
+          setMessage(`Berhasil sync ${data.count} produk!`)
+          setIsError(false)
+          // Reload the page to show updated data
+          setTimeout(() => window.location.reload(), 1500)
+        }
       } else {
         setMessage(data.error || 'Sync gagal')
         setIsError(true)
