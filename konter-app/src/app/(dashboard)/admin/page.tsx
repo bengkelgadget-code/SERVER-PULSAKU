@@ -1,4 +1,4 @@
-import { createClient } from '@/infrastructure/supabase/server'
+import { createClient, createAdminClient } from '@/infrastructure/supabase/server'
 import { ProductFilters } from '@/components/ProductFilters'
 import { ProductTableClient } from './ProductTableClient'
 import { SyncButton } from './SyncButton'
@@ -10,24 +10,25 @@ export const maxDuration = 60
 
 export default async function AdminProductsPage({ searchParams }: { searchParams: Promise<Record<string, string | undefined>> }) {
   const supabase = await createClient()
+  const supabaseAdmin = createAdminClient()
   const sp = await searchParams
   const currentCategory = sp?.category as string | undefined
   const currentBrand = sp?.brand as string | undefined
 
-  // Fetch unique categories
-  const { data: categoriesData } = await supabase
+  // Use admin client to bypass RLS - admin must see ALL products including inactive
+  const { data: categoriesData } = await supabaseAdmin
     .from('products')
     .select('category')
 
   const categories = Array.from(new Set(categoriesData?.map(c => c.category) || [])).sort()
 
   // Fetch unique brands based on category
-  let brandQuery = supabase.from('products').select('brand')
+  let brandQuery = supabaseAdmin.from('products').select('brand')
   if (currentCategory) brandQuery = brandQuery.eq('category', currentCategory)
   const { data: brandsData } = await brandQuery
   const brands = Array.from(new Set(brandsData?.map(b => b.brand) || [])).sort()
 
-  let query = supabase
+  let query = supabaseAdmin
     .from('products')
     .select('*')
     .order('brand', { ascending: true })
