@@ -42,16 +42,20 @@ export async function syncDigiFlazzProducts() {
       updated_at: new Date().toISOString(),
     }));
 
-    const { error } = await supabase
-      .from('products')
-      .upsert(upsertData, {
-        onConflict: 'sku_code',
-        ignoreDuplicates: false,
-      });
+    const CHUNK_SIZE = 1000;
+    for (let i = 0; i < upsertData.length; i += CHUNK_SIZE) {
+      const chunk = upsertData.slice(i, i + CHUNK_SIZE);
+      const { error } = await supabase
+        .from('products')
+        .upsert(chunk, {
+          onConflict: 'sku_code',
+          ignoreDuplicates: false,
+        });
 
-    if (error) {
-      console.error("Error syncing products to Supabase", error);
-      return { success: false, error: error.message };
+      if (error) {
+        console.error("Error syncing products to Supabase", error);
+        return { success: false, error: error.message };
+      }
     }
 
     return { success: true, count: upsertData.length };
