@@ -5,8 +5,8 @@ export async function syncDigiFlazzProducts() {
   const supabase = createAdminClient();
 
   try {
-    // Fetch BOTH prepaid and postpaid (which includes PLN Token)
-    const [prepaidRes, postpaidRes] = await Promise.allSettled([
+    // Fetch BOTH prepaid and pasca (postpaid)
+    const [prepaidRes, pascaRes] = await Promise.allSettled([
       digiflazz.getPriceList('prepaid'),
       digiflazz.getPriceList('pasca'),
     ]);
@@ -17,37 +17,52 @@ export async function syncDigiFlazzProducts() {
     if (prepaidRes.status === 'fulfilled') {
       allProducts = allProducts.concat(prepaidRes.value.data || []);
     }
-    if (postpaidRes.status === 'fulfilled') {
-      allProducts = allProducts.concat(postpaidRes.value.data || []);
+    if (pascaRes.status === 'fulfilled') {
+      allProducts = allProducts.concat(pascaRes.value.data || []);
     }
 
     if (allProducts.length === 0) {
       return { success: false, error: 'Tidak ada produk dari DigiFlazz' };
     }
 
-    // Deduplicate by sku_code
+    // Deduplicate by sku_code (keep last occurrence)
     const uniqueProductsMap = new Map();
     for (const p of allProducts) {
       uniqueProductsMap.set(p.buyer_sku_code, p);
     }
     const uniqueProducts = Array.from(uniqueProductsMap.values());
 
+    // Get all existing SKUs from database to preserve harga_jual
+    const { data: existingProducts } = await supabase
+      .from('products')
+      .select('sku_code, harga_jual');
+
+    const existingPriceMap = new Map<string, number>();
+    if (existingProducts) {
+      for (const ep of existingProducts) {
+        existingPriceMap.set(ep.sku_code, ep.harga_jual);
+      }
+    }
+
     const upsertData = uniqueProducts.map(p => {
       const isActive = p.buyer_product_status === true && p.seller_product_status === true;
+      const existingPrice = existingPriceMap.get(p.buyer_sku_code);
+
       return {
         sku_code: p.buyer_sku_code,
         product_name: p.product_name,
         category: p.category,
         brand: p.brand,
         harga_modal: p.price,
-        // Default markup: modal + 500, minimum 1000 for expensive items
-        harga_jual: Math.max(p.price + 500, Math.round(p.price * 1.03)),
+        // Preserve existing harga_jual if product already exists, otherwise set default
+        harga_jual: existingPrice ?? Math.max(p.price + 500, Math.round(p.price * 1.03)),
         is_active: isActive,
         updated_at: new Date().toISOString(),
       };
     });
 
-    const CHUNK_SIZE = 1000;
+    // Upsert in chunks of 500
+    const CHUNK_SIZE = 500;
     const promises = [];
     for (let i = 0; i < upsertData.length; i += CHUNK_SIZE) {
       const chunk = upsertData.slice(i, i + CHUNK_SIZE);

@@ -1,5 +1,4 @@
 import { createClient } from '@/infrastructure/supabase/server'
-import { syncProductsAction } from './actions'
 import { ProductFilters } from '@/components/ProductFilters'
 import { ProductTableClient } from './ProductTableClient'
 import { SyncButton } from './SyncButton'
@@ -56,9 +55,7 @@ export default async function AdminProductsPage({ searchParams }: { searchParams
             <h2 className="text-xl font-bold tracking-tight">Product Catalog</h2>
             <p className="text-xs text-muted-foreground">{products?.length || 0} produk terdaftar</p>
           </div>
-          <form action={syncProductsAction}>
-            <SyncButton />
-          </form>
+          <SyncButton />
         </div>
 
         <ProductFilters categories={categories} brands={brands} basePath="/admin" />
