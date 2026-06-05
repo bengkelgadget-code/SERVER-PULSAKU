@@ -31,7 +31,10 @@ export async function syncDigiFlazzProducts() {
       uniqueProductsMap.set(p.buyer_sku_code, p);
     }
     const uniqueProducts = Array.from(uniqueProductsMap.values())
-      .filter(p => p.buyer_sku_code && p.buyer_sku_code.trim() !== '');
+      .filter(p => 
+        p.buyer_sku_code && p.buyer_sku_code.trim() !== '' &&
+        p.price !== null && p.price !== undefined
+      );
 
     // Get all existing SKUs from database to preserve harga_jual
     const { data: existingProducts } = await supabase
