@@ -8,10 +8,15 @@ export async function POST() {
   try {
     const supabase = await createClient()
 
-    // Verify auth
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) {
-      return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 })
+    let user;
+    try {
+      const { data, error } = await supabase.auth.getUser()
+      if (error || !data.user) {
+        return NextResponse.json({ success: false, error: 'Sesi berakhir, silakan login ulang.' }, { status: 401 })
+      }
+      user = data.user;
+    } catch (authErr) {
+      return NextResponse.json({ success: false, error: 'Sesi tidak valid, silakan login ulang.' }, { status: 401 })
     }
 
     const { data: userData } = await supabase

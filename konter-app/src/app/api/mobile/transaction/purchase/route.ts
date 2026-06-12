@@ -39,7 +39,7 @@ export async function POST(request: Request) {
   }
 
   try {
-    const { sku_code, customer_no } = await request.json()
+    const { sku_code, customer_no, customer_name } = await request.json()
 
     if (!sku_code || !customer_no) {
       return NextResponse.json({ error: 'sku_code and customer_no are required' }, { status: 400 })
@@ -90,12 +90,22 @@ export async function POST(request: Request) {
       if (dfStatus === 'sukses') dbStatus = 'sukses'
       if (dfStatus === 'gagal') dbStatus = 'gagal'
 
+      // If frontend passed customer_name, prepend it to the SN
+      let finalSn = response.data.sn || null;
+      if (customer_name) {
+        if (finalSn) {
+          finalSn = `A/N ${customer_name} | SN: ${finalSn}`;
+        } else {
+          finalSn = `A/N ${customer_name}`;
+        }
+      }
+
       // Update transaction status
       await supabase
         .from('transactions')
         .update({
           status: dbStatus,
-          sn: response.data.sn || null,
+          sn: finalSn,
           updated_at: new Date().toISOString(),
         })
         .eq('id', transactionId)

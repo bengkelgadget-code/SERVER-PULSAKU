@@ -12,14 +12,6 @@ async function check() {
     username,
     sign
   });
-  
-  const all = res.data.data;
-  const byu = all.filter(p => p.brand.toLowerCase().includes('by.u') || p.brand.toLowerCase().includes('byu'));
-  console.log('Total byu in digiflazz:', byu.length);
-  const active = byu.filter(p => p.buyer_product_status && p.seller_product_status);
-  console.log('Active byu:', active.length);
-  if(active.length > 0) {
-    console.log('Active products:', active.map(p => p.product_name));
-  }
+  console.log('Prepaid count:', res.data.data.length);
 }
 check();
